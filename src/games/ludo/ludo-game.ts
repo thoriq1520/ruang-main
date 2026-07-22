@@ -19,6 +19,7 @@ export type LudoState = {
   currentPlayerId: string | null
   pendingRoll: number | null
   lastRoll: number | null
+  lastRollSequence: number
   lastMove: LudoMove | null
   winnerId: string | null
   log: string[]
@@ -48,7 +49,7 @@ const colorOffsets: Record<LudoColor, number> = {red: 0, blue: 13, green: 26, ye
 const safeTrackCells = new Set(Object.values(colorOffsets))
 
 export function createLudoLobby(hostId: string, hostName: string): LudoState {
-  return {gameId: 'ludo', phase: 'lobby', sequence: 0, hostId, players: [player(hostId, hostName)], currentPlayerId: null, pendingRoll: null, lastRoll: null, lastMove: null, winnerId: null, log: []}
+  return {gameId: 'ludo', phase: 'lobby', sequence: 0, hostId, players: [player(hostId, hostName)], currentPlayerId: null, pendingRoll: null, lastRoll: null, lastRollSequence: -1, lastMove: null, winnerId: null, log: []}
 }
 
 export function createLudoDemo(): LudoState {
@@ -97,8 +98,8 @@ export function rollLudo(state: LudoState, requesterId: string, forcedRoll?: num
   if (!Number.isInteger(roll) || roll < 1 || roll > 6) return state
   const movable = movableLudoTokens(state, requesterId, roll)
   const current = state.players.find((item) => item.id === requesterId)!
-  if (movable.length) return {...state, sequence: state.sequence + 1, pendingRoll: roll, lastRoll: roll, log: [...state.log, `${current.name} mendapat ${roll}.`].slice(-12)}
-  return {...state, sequence: state.sequence + 1, lastRoll: roll, currentPlayerId: roll === 6 ? requesterId : nextPlayerId(state, requesterId), log: [...state.log, `${current.name} mendapat ${roll}, tetapi tidak ada pion yang dapat bergerak.`].slice(-12)}
+  if (movable.length) return {...state, sequence: state.sequence + 1, pendingRoll: roll, lastRoll: roll, lastRollSequence: state.sequence + 1, log: [...state.log, `${current.name} mendapat ${roll}.`].slice(-12)}
+  return {...state, sequence: state.sequence + 1, lastRoll: roll, lastRollSequence: state.sequence + 1, currentPlayerId: roll === 6 ? requesterId : nextPlayerId(state, requesterId), log: [...state.log, `${current.name} mendapat ${roll}, tetapi tidak ada pion yang dapat bergerak.`].slice(-12)}
 }
 
 export function moveLudoToken(state: LudoState, requesterId: string, tokenIndex: number): LudoState {

@@ -1,5 +1,5 @@
 import {snakeMap, snakeMaps, type SnakeMap, type SnakesState} from './snakes-game'
-import {copyIcon, escapeHtml, initial, logoMark} from '../../ui'
+import {copyIcon, dieView, escapeHtml, initial, logoMark} from '../../ui'
 
 const playerClasses = ['pawn-0', 'pawn-1', 'pawn-2', 'pawn-3']
 
@@ -31,7 +31,7 @@ export function snakesLobbyScreen(state: SnakesState | null, roomCode: string, h
     </main>`
 }
 
-export function snakesGameScreen(state: SnakesState, roomCode: string, canRoll: boolean, demo: boolean, animateMove: boolean) {
+export function snakesGameScreen(state: SnakesState, roomCode: string, canRoll: boolean, demo: boolean, animateDice: boolean) {
   const map = snakeMap(state.mapId)
   const current = state.players.find((player) => player.id === state.currentPlayerId)
   const winner = state.players.find((player) => player.id === state.winnerId)
@@ -44,13 +44,13 @@ export function snakesGameScreen(state: SnakesState, roomCode: string, canRoll: 
     <main id="main-content" class="snakes-game-shell theme-${map.id}">
       <aside class="snakes-side-panel">
         <div><p class="eyebrow">ULAR TANGGA</p><h1>${escapeHtml(map.name)}</h1><p>${escapeHtml(map.tagline)}</p></div>
-        <div class="snakes-turn-card"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="snakes-die" aria-label="Hasil dadu terakhir">${state.lastRoll ?? '?'}</div><button class="button button-primary" id="roll-snakes" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : 'Menunggu giliran'}</button></div>
+        <div class="snakes-turn-card"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="single-die dice-row" role="status" aria-live="polite">${dieView(state.lastRoll, 0, animateDice)}</div><button class="button button-primary" id="roll-snakes" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : 'Menunggu giliran'}</button></div>
         <div class="snakes-player-list">${state.players.map((player, index) => `<div class="${player.id === state.currentPlayerId ? 'is-current' : ''}"><span class="snake-player-dot ${playerClasses[index]}">${initial(player.name)}</span><p><strong>${escapeHtml(player.name)}</strong><small>Petak ${player.position}</small></p></div>`).join('')}</div>
         <ol class="snakes-log">${state.log.slice(-4).reverse().map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}</ol>
       </aside>
       <section class="snakes-board-wrap" aria-label="Papan ${escapeHtml(map.name)}">
         <div class="snakes-board">
-          ${boardNumbers().map((number) => boardCell(number, state, map, animateMove)).join('')}
+          ${boardNumbers().map((number) => boardCell(number, state, map)).join('')}
           <svg class="snakes-links" viewBox="0 0 1000 1000" aria-hidden="true">${links(map)}</svg>
         </div>
       </section>
@@ -70,11 +70,11 @@ function boardNumbers() {
   }).flat()
 }
 
-function boardCell(number: number, state: SnakesState, map: SnakeMap, animateMove: boolean) {
+function boardCell(number: number, state: SnakesState, map: SnakeMap) {
   const players = state.players.map((player, index) => ({player, index})).filter(({player}) => player.position === number)
   const destination = map.ladders[number] ?? map.snakes[number]
   const effect = map.ladders[number] ? `Tangga ke ${destination}` : map.snakes[number] ? `Ular ke ${destination}` : ''
-  return `<div class="snakes-cell ${number === 1 || number === 100 ? 'is-corner' : ''}" aria-label="Petak ${number}${effect ? `, ${effect}` : ''}"><span>${number}</span><div class="snakes-cell-tokens">${players.map(({player, index}) => `<i class="snake-token ${animateMove && player.id === state.lastMove?.playerId ? 'is-latest' : ''} ${playerClasses[index]}" title="${escapeHtml(player.name)}">${initial(player.name)}</i>`).join('')}</div></div>`
+  return `<div class="snakes-cell ${number === 1 || number === 100 ? 'is-corner' : ''}" data-snake-cell="${number}" aria-label="Petak ${number}${effect ? `, ${effect}` : ''}"><span>${number}</span><div class="snakes-cell-tokens">${players.map(({player, index}) => `<i class="snake-token ${playerClasses[index]}" data-snake-player="${escapeHtml(player.id)}" title="${escapeHtml(player.name)}">${initial(player.name)}</i>`).join('')}</div></div>`
 }
 
 function cellCenter(number: number) {

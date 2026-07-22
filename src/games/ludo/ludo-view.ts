@@ -1,5 +1,5 @@
 import {globalTrackIndex, ludoColorNames, ludoColors, ludoHomeCells, ludoTrackCells, type LudoColor, type LudoState} from './ludo-game'
-import {copyIcon, escapeHtml, initial, logoMark} from '../../ui'
+import {copyIcon, dieView, escapeHtml, initial, logoMark} from '../../ui'
 
 const baseTokenCells: Record<LudoColor, readonly (readonly [number, number])[]> = {
   red: [[1, 1], [1, 4], [4, 1], [4, 4]],
@@ -41,7 +41,7 @@ export function ludoLobbyScreen(state: LudoState | null, roomCode: string, host:
     </main>`
 }
 
-export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: boolean, canChoose: boolean, movableTokens: number[], demo: boolean, animateMove: boolean) {
+export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: boolean, canChoose: boolean, movableTokens: number[], demo: boolean, animateDice: boolean) {
   const current = state.players.find((player) => player.id === state.currentPlayerId)
   const winner = state.players.find((player) => player.id === state.winnerId)
   return `
@@ -53,7 +53,7 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
     <main id="main-content" class="ludo-game-shell">
       <aside class="ludo-side-panel">
         <div><p class="eyebrow">LUDO KLASIK</p><h1>Balapan pulang</h1><p>Keluarkan pion dengan angka enam. Bawa keempat pion tepat ke rumah untuk menang.</p></div>
-        <div class="ludo-turn-card ${current?.color ? `color-${current.color}` : ''}"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="ludo-die" aria-label="Hasil dadu terakhir">${state.lastRoll ?? '?'}</div>
+        <div class="ludo-turn-card ${current?.color ? `color-${current.color}` : ''}"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="single-die dice-row" role="status" aria-live="polite">${dieView(state.lastRoll, 0, animateDice)}</div>
           ${state.pendingRoll !== null && canChoose ? `<p>Pilih pion untuk bergerak ${state.pendingRoll} langkah.</p><div class="ludo-token-choices">${movableTokens.map((index) => `<button type="button" data-ludo-token="${index}"><i aria-hidden="true"></i>Pion ${index + 1}</button>`).join('')}</div>` : `<button class="button button-primary" id="roll-ludo" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : state.pendingRoll !== null ? 'Memilih pion...' : 'Menunggu giliran'}</button>`}
         </div>
         <div class="ludo-player-list">${state.players.map((player) => `<div class="${player.id === state.currentPlayerId ? 'is-current' : ''}"><span class="ludo-player-mark color-${player.color}">${initial(player.name)}</span><p><strong>${escapeHtml(player.name)}</strong><small>${player.tokens.filter((token) => token === 57).length}/4 pion pulang</small></p></div>`).join('')}</div>
@@ -65,18 +65,18 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
           ${ludoTrackCells.map(([row, column], index) => `<div class="ludo-cell ludo-track ${[0, 13, 26, 39].includes(index) ? `is-safe color-${ludoColors[[0, 13, 26, 39].indexOf(index)]}` : ''}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true"></div>`).join('')}
           ${ludoColors.flatMap((color) => ludoHomeCells[color].map(([row, column]) => `<div class="ludo-cell ludo-home color-${color}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true"></div>`)).join('')}
           <div class="ludo-center" aria-label="Rumah akhir"></div>
-          ${state.players.flatMap((player) => player.tokens.map((progress, tokenIndex) => tokenView(player.color!, progress, tokenIndex, player.name, animateMove && player.id === state.lastMove?.playerId && tokenIndex === state.lastMove.tokenIndex))).join('')}
+          ${state.players.flatMap((player) => player.tokens.map((progress, tokenIndex) => tokenView(player.id, player.color!, progress, tokenIndex, player.name))).join('')}
         </div>
       </section>
       ${state.phase === 'finished' ? `<section class="snakes-result" role="dialog" aria-modal="true"><p class="eyebrow">PERMAINAN SELESAI</p><h2>${escapeHtml(winner?.name ?? 'Pemain')} menang!</h2><p>Keempat pion berhasil tiba di rumah.</p><button class="button button-primary" type="button" data-leave>Kembali ke beranda</button></section>` : ''}
     </main>`
 }
 
-function tokenView(color: LudoColor, progress: number, tokenIndex: number, name: string, latest: boolean) {
+function tokenView(playerId: string, color: LudoColor, progress: number, tokenIndex: number, name: string) {
   const [row, column] = progress === -1
     ? baseTokenCells[color][tokenIndex]
     : progress <= 51
       ? ludoTrackCells[globalTrackIndex(color, progress)]
       : ludoHomeCells[color][progress - 52]
-  return `<span class="ludo-token color-${color} ${latest ? 'is-latest' : ''}" style="--row:${row + 1};--column:${column + 1};--token-offset:${tokenIndex}" title="${escapeHtml(name)}, pion ${tokenIndex + 1}" aria-label="${escapeHtml(name)}, pion ${tokenIndex + 1}"><i></i></span>`
+  return `<span class="ludo-token color-${color}" data-ludo-player="${escapeHtml(playerId)}" data-ludo-token="${tokenIndex}" style="--row:${row + 1};--column:${column + 1};--token-offset:${tokenIndex}" title="${escapeHtml(name)}, pion ${tokenIndex + 1}" aria-label="${escapeHtml(name)}, pion ${tokenIndex + 1}"><i></i></span>`
 }

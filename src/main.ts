@@ -37,10 +37,10 @@ import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './con
 import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './games/arrow/arrow-game'
 import {arrowGameScreen} from './games/arrow/arrow-view'
 import {gameById, gameCard, gameCatalog, type GameId} from './games/game-catalog'
-import {copyIcon, escapeHtml, initial, logoMark} from './ui'
-import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
+import {copyIcon, dieView, escapeHtml, initial, logoMark} from './ui'
+import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakeMove, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
 import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
-import {addLudoPlayer, createLudoDemo, createLudoLobby, isLudoState, ludoColors, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoState} from './games/ludo/ludo-game'
+import {addLudoPlayer, createLudoDemo, createLudoLobby, globalTrackIndex, isLudoState, ludoColors, ludoHomeCells, ludoTrackCells, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoMove, type LudoState} from './games/ludo/ludo-game'
 import {ludoGameScreen, ludoLobbyScreen} from './games/ludo/ludo-view'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -64,6 +64,8 @@ let isAnimatingPawn = false
 let lastAnimatedRollSequence = -1
 let lastAnimatedSnakesMoveSequence = -1
 let lastAnimatedLudoMoveSequence = -1
+let lastAnimatedSnakesRollSequence = -1
+let lastAnimatedLudoRollSequence = -1
 let auctionClock = 0
 let joinTimer = 0
 
@@ -478,10 +480,10 @@ function renderSnakesGame() {
     return renderSnakesLobby()
   }
   const canRoll = snakesGame.phase === 'playing' && (isDemo || snakesGame.currentPlayerId === localPeerId)
-  const moveSequence = snakesGame.lastMove?.sequence ?? -1
-  const animateMove = moveSequence > lastAnimatedSnakesMoveSequence
-  app.innerHTML = snakesGameScreen(snakesGame, activeRoomCode || 'DEMO', canRoll, isDemo, animateMove)
-  lastAnimatedSnakesMoveSequence = Math.max(lastAnimatedSnakesMoveSequence, moveSequence)
+  const rollSequence = snakesGame.lastMove?.sequence ?? -1
+  const animateDice = rollSequence > lastAnimatedSnakesRollSequence
+  app.innerHTML = snakesGameScreen(snakesGame, activeRoomCode || 'DEMO', canRoll, isDemo, animateDice)
+  lastAnimatedSnakesRollSequence = Math.max(lastAnimatedSnakesRollSequence, rollSequence)
   bindLeaveButtons()
   document.querySelector<HTMLButtonElement>('#roll-snakes')?.addEventListener('click', (event) => {
     const button = event.currentTarget as HTMLButtonElement
@@ -511,10 +513,10 @@ function renderLudoGame() {
   const canRoll = ludoGame.phase === 'playing' && localTurn && ludoGame.pendingRoll === null
   const canChoose = ludoGame.phase === 'playing' && localTurn && ludoGame.pendingRoll !== null
   const movable = ludoGame.currentPlayerId ? movableLudoTokens(ludoGame, ludoGame.currentPlayerId) : []
-  const moveSequence = ludoGame.lastMove?.sequence ?? -1
-  const animateMove = moveSequence > lastAnimatedLudoMoveSequence
-  app.innerHTML = ludoGameScreen(ludoGame, activeRoomCode || 'DEMO', canRoll, canChoose, movable, isDemo, animateMove)
-  lastAnimatedLudoMoveSequence = Math.max(lastAnimatedLudoMoveSequence, moveSequence)
+  const rollSequence = ludoGame.lastRollSequence ?? -1
+  const animateDice = rollSequence > lastAnimatedLudoRollSequence
+  app.innerHTML = ludoGameScreen(ludoGame, activeRoomCode || 'DEMO', canRoll, canChoose, movable, isDemo, animateDice)
+  lastAnimatedLudoRollSequence = Math.max(lastAnimatedLudoRollSequence, rollSequence)
   bindLeaveButtons()
   document.querySelector<HTMLButtonElement>('#roll-ludo')?.addEventListener('click', (event) => {
     const button = event.currentTarget as HTMLButtonElement
@@ -787,19 +789,31 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
       window.clearTimeout(joinTimer)
       if (isLudoState(snapshot)) {
         if (ludoGame && snapshot.sequence < ludoGame.sequence) return
+        const move = ludoGame && snapshot.lastMove && snapshot.lastMove.sequence > (ludoGame.lastMove?.sequence ?? -1) ? snapshot.lastMove : null
+        const origins = move ? captureLudoTokenPoints() : null
         ludoGame = snapshot
         snakesGame = null
         game = null
         view = snapshot.phase === 'lobby' ? 'ludo-lobby' : 'ludo-game'
         render()
+        if (move && origins && move.sequence > lastAnimatedLudoMoveSequence) {
+          lastAnimatedLudoMoveSequence = move.sequence
+          animateLudoMove(move, origins)
+        }
         return
       }
       if (isSnakesState(snapshot)) {
         if (snakesGame && snapshot.sequence < snakesGame.sequence) return
+        const move = snakesGame && snapshot.lastMove && snapshot.lastMove.sequence > (snakesGame.lastMove?.sequence ?? -1) ? snapshot.lastMove : null
+        const origin = move ? snakeTokenPoint(move.playerId) : null
         snakesGame = snapshot
         game = null
         view = snapshot.phase === 'lobby' ? 'snakes-lobby' : 'snakes-game'
         render()
+        if (move && move.sequence > lastAnimatedSnakesMoveSequence) {
+          lastAnimatedSnakesMoveSequence = move.sequence
+          animateSnakesMove(move, origin)
+        }
         return
       }
       if (game && snapshot.sequence < game.sequence) return
@@ -904,13 +918,19 @@ function isLudoIntent(intent: RoomIntent): intent is LudoIntent {
 function applySnakesIntent(intent: SnakesIntent, requesterId: string) {
   if (!snakesGame) return
   const before = snakesGame
+  const origin = intent.type === 'SNAKES_ROLL' ? snakeTokenPoint(requesterId) : null
   if (intent.type === 'SNAKES_SET_MAP') snakesGame = setSnakesMap(snakesGame, requesterId, intent.mapId)
   else if (intent.type === 'SNAKES_START') snakesGame = startSnakes(snakesGame, requesterId)
   else snakesGame = rollSnakes(snakesGame, requesterId)
   if (snakesGame === before) return
+  const move = snakesGame.lastMove?.sequence !== before.lastMove?.sequence ? snakesGame.lastMove : null
   view = snakesGame.phase === 'lobby' ? 'snakes-lobby' : 'snakes-game'
   publishState()
   render()
+  if (move && move.sequence > lastAnimatedSnakesMoveSequence) {
+    lastAnimatedSnakesMoveSequence = move.sequence
+    animateSnakesMove(move, origin)
+  }
 }
 
 function requestSnakesIntent(intent: SnakesIntent, demoRequesterId = localPeerId) {
@@ -922,14 +942,20 @@ function requestSnakesIntent(intent: SnakesIntent, demoRequesterId = localPeerId
 function applyLudoIntent(intent: LudoIntent, requesterId: string) {
   if (!ludoGame) return
   const before = ludoGame
+  const origins = intent.type === 'LUDO_MOVE' ? captureLudoTokenPoints() : null
   if (intent.type === 'LUDO_SET_COLOR') ludoGame = setLudoColor(ludoGame, requesterId, intent.color)
   else if (intent.type === 'LUDO_START') ludoGame = startLudo(ludoGame, requesterId)
   else if (intent.type === 'LUDO_ROLL') ludoGame = rollLudo(ludoGame, requesterId)
   else ludoGame = moveLudoToken(ludoGame, requesterId, intent.tokenIndex)
   if (ludoGame === before) return
+  const move = ludoGame.lastMove?.sequence !== before.lastMove?.sequence ? ludoGame.lastMove : null
   view = ludoGame.phase === 'lobby' ? 'ludo-lobby' : 'ludo-game'
   publishState()
   render()
+  if (move && origins && move.sequence > lastAnimatedLudoMoveSequence) {
+    lastAnimatedLudoMoveSequence = move.sequence
+    animateLudoMove(move, origins)
+  }
 }
 
 function requestLudoIntent(intent: LudoIntent, demoRequesterId = localPeerId) {
@@ -1076,6 +1102,127 @@ function pawnScreenPoint(playerIndex: number): ScreenPoint | null {
   return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2}
 }
 
+function elementScreenPoint(selector: string): ScreenPoint | null {
+  const element = document.querySelector<HTMLElement>(selector)
+  if (!element) return null
+  const rect = element.getBoundingClientRect()
+  return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2}
+}
+
+function snakeTokenSelector(playerId: string) {
+  return `[data-snake-player="${CSS.escape(playerId)}"]`
+}
+
+function snakeTokenPoint(playerId: string) {
+  return elementScreenPoint(snakeTokenSelector(playerId))
+}
+
+function snakeCellPoint(position: number) {
+  return elementScreenPoint(`[data-snake-cell="${position}"]`)
+}
+
+function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
+  const selector = snakeTokenSelector(move.playerId)
+  const target = elementScreenPoint(selector)
+  if (!target) return
+  const points: ScreenPoint[] = [origin ?? snakeCellPoint(move.from) ?? target]
+  for (let position = move.from + 1; position <= move.landed; position++) {
+    const point = snakeCellPoint(position)
+    if (point) points.push(point)
+  }
+  if (move.to !== move.landed) {
+    const effectTarget = snakeCellPoint(move.to)
+    if (effectTarget) points.push(effectTarget)
+  }
+  points[points.length - 1] = target
+  animateBoardPiece(selector, points)
+}
+
+function ludoTokenKey(playerId: string, tokenIndex: number) {
+  return `${playerId}:${tokenIndex}`
+}
+
+function ludoTokenSelector(playerId: string, tokenIndex: number) {
+  return `[data-ludo-player="${CSS.escape(playerId)}"][data-ludo-token="${tokenIndex}"]`
+}
+
+function captureLudoTokenPoints() {
+  const points = new Map<string, ScreenPoint>()
+  document.querySelectorAll<HTMLElement>('[data-ludo-player][data-ludo-token]').forEach((token) => {
+    const playerId = token.dataset.ludoPlayer
+    const tokenIndex = Number(token.dataset.ludoToken)
+    if (!playerId || !Number.isInteger(tokenIndex)) return
+    const rect = token.getBoundingClientRect()
+    points.set(ludoTokenKey(playerId, tokenIndex), {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2})
+  })
+  return points
+}
+
+function ludoProgressPoint(color: LudoColor, progress: number, boardRect: DOMRect): ScreenPoint {
+  const [row, column] = progress <= 51
+    ? ludoTrackCells[globalTrackIndex(color, progress)]
+    : ludoHomeCells[color][progress - 52]
+  return {
+    x: boardRect.left + (column + .5) * boardRect.width / 15,
+    y: boardRect.top + (row + .5) * boardRect.height / 15,
+  }
+}
+
+function animateLudoMove(move: LudoMove, origins: Map<string, ScreenPoint>) {
+  const player = ludoGame?.players.find((item) => item.id === move.playerId)
+  const boardRect = document.querySelector<HTMLElement>('.ludo-board')?.getBoundingClientRect()
+  const selector = ludoTokenSelector(move.playerId, move.tokenIndex)
+  const target = elementScreenPoint(selector)
+  const origin = origins.get(ludoTokenKey(move.playerId, move.tokenIndex))
+  if (!player?.color || !boardRect || !target || !origin) return
+
+  const points: ScreenPoint[] = [origin]
+  for (let progress = Math.max(0, move.from + 1); progress <= move.to; progress++) points.push(ludoProgressPoint(player.color, progress, boardRect))
+  points[points.length - 1] = target
+  animateBoardPiece(selector, points)
+
+  if (move.capturedPlayerId !== undefined && move.capturedTokenIndex !== undefined) {
+    const capturedSelector = ludoTokenSelector(move.capturedPlayerId, move.capturedTokenIndex)
+    const capturedOrigin = origins.get(ludoTokenKey(move.capturedPlayerId, move.capturedTokenIndex))
+    const capturedTarget = elementScreenPoint(capturedSelector)
+    if (capturedOrigin && capturedTarget) animateBoardPiece(capturedSelector, [capturedOrigin, capturedTarget])
+  }
+}
+
+function animateBoardPiece(selector: string, points: ScreenPoint[]) {
+  if (reducedMotion() || points.length < 2) return
+  const piece = document.querySelector<HTMLElement>(selector)
+  const target = elementScreenPoint(selector)
+  if (!piece || !target) return
+  const traveled = points.some((point) => Math.hypot(point.x - target.x, point.y - target.y) > 1)
+  if (!traveled) return
+
+  const segments = points.length - 1
+  const frames: Keyframe[] = [{offset: 0, transform: `translate3d(${points[0].x - target.x}px, ${points[0].y - target.y}px, 0) scale(1)`, filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))'}]
+  for (let index = 1; index < points.length; index++) {
+    const previous = points[index - 1]
+    const point = points[index]
+    frames.push({
+      offset: (index - .5) / segments,
+      transform: `translate3d(${(previous.x + point.x) / 2 - target.x}px, ${(previous.y + point.y) / 2 - target.y - 10}px, 0) scale(1.08)`,
+      filter: 'drop-shadow(0 9px 4px rgba(0,0,0,.38))',
+    })
+    frames.push({offset: index / segments, transform: `translate3d(${point.x - target.x}px, ${point.y - target.y}px, 0) scale(1)`, filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))'})
+  }
+
+  piece.classList.add('is-board-moving')
+  const animation = piece.animate(frames, {
+    duration: Math.min(1_200, Math.max(360, segments * 140)),
+    easing: 'cubic-bezier(.2,.72,.24,1)',
+    fill: 'both',
+  })
+  const cleanUp = () => {
+    animation.cancel()
+    piece.classList.remove('is-board-moving')
+  }
+  void animation.finished.then(cleanUp, cleanUp)
+}
+
 function pawnMoveBetween(before: GameState, after: GameState): PawnMove | null {
   const playerIndex = after.players.findIndex((player) => {
     const previous = before.players.find((item) => item.id === player.id)
@@ -1199,44 +1346,6 @@ function updateRollButton() {
   })
 }
 
-function dieView(value: number | null, index: number, animate: boolean) {
-  if (value === null) return `<span class="die die-empty" aria-label="Dadu ${index + 1} belum dilempar">-</span>`
-
-  const rotations: Record<number, [number, number]> = {
-    1: [0, 0],
-    2: [0, -90],
-    3: [-90, 0],
-    4: [90, 0],
-    5: [0, 90],
-    6: [0, 180],
-  }
-  const [rotateX, rotateY] = rotations[value]
-
-  return `
-    <span class="die-scene ${animate ? 'is-rolling' : ''} die-${index + 1}" aria-label="Dadu ${index + 1}: ${value}">
-      <span class="die-cube" style="--die-rx:${rotateX}deg;--die-ry:${rotateY}deg" aria-hidden="true">
-        ${dieFace(1, 'front')}
-        ${dieFace(2, 'right')}
-        ${dieFace(3, 'top')}
-        ${dieFace(4, 'bottom')}
-        ${dieFace(5, 'left')}
-        ${dieFace(6, 'back')}
-      </span>
-    </span>`
-}
-
-function dieFace(value: number, side: string) {
-  const pipPositions: Record<number, number[]> = {
-    1: [5],
-    2: [1, 9],
-    3: [1, 5, 9],
-    4: [1, 3, 7, 9],
-    5: [1, 3, 5, 7, 9],
-    6: [1, 3, 4, 6, 7, 9],
-  }
-  return `<span class="die-face face-${side}">${pipPositions[value].map((position) => `<i class="pip pip-${position}"></i>`).join('')}</span>`
-}
-
 function publishState() {
   if (!isHost || isDemo) return
   const state = activeGameId === 'ludo' ? ludoGame : activeGameId === 'snakes-ladders' ? snakesGame : game
@@ -1251,6 +1360,8 @@ async function leaveToHome(message = '') {
   isAnimatingPawn = false
   lastAnimatedSnakesMoveSequence = -1
   lastAnimatedLudoMoveSequence = -1
+  lastAnimatedSnakesRollSequence = -1
+  lastAnimatedLudoRollSequence = -1
   network = null
   game = null
   arrowGame = null

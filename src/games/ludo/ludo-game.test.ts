@@ -20,7 +20,9 @@ test('warna harus unik dan semua pemain memilih warna sebelum mulai', () => {
 
 test('pion hanya dapat keluar dari markas dengan angka enam', () => {
   let state = readyGame()
+  const rollSequence = state.sequence + 1
   state = rollLudo(state, 'a', 3)
+  assert.equal(state.lastRollSequence, rollSequence)
   assert.deepEqual(state.players[0].tokens, [-1, -1, -1, -1])
   assert.equal(state.currentPlayerId, 'b')
   state = rollLudo(state, 'b', 6)
