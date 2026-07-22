@@ -159,6 +159,8 @@ function renderHome() {
     </dialog>`}
   `
 
+  requestHomeAd()
+
   document.querySelectorAll<HTMLButtonElement>('[data-select-game]').forEach((button) => button.addEventListener('click', () => {
     selectedGameId = button.dataset.selectGame as GameId
     renderHome()
@@ -309,7 +311,14 @@ function publicHeader(active?: PublicPageSlug) {
 
 function homeSupport() {
   return `<div class="public-shell home-support">
-    <aside class="ad-slot" data-ad-placement="home-content" aria-label="Iklan"></aside>
+    <aside class="ad-slot" data-ad-placement="home-content" aria-label="Iklan">
+      <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-4066128992268171"
+        data-ad-slot="4940905838"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+    </aside>
 
     <section class="session-guide" aria-labelledby="support-title">
       <header><h2 id="support-title">Tentang sesi ini</h2><p>Tidak ada akun dan progres permanen. Room multiplayer menghubungkan browser pemain secara langsung.</p></header>
@@ -332,6 +341,11 @@ function homeSupport() {
       <a class="inline-link" href="/faq">Lihat semua FAQ</a>
     </section>
   </div>`
+}
+
+function requestHomeAd() {
+  const adWindow = window as Window & {adsbygoogle?: unknown[]}
+  ;(adWindow.adsbygoogle ??= []).push({})
 }
 
 function renderPublicPage(slug: PublicPageSlug) {
