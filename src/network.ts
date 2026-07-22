@@ -1,11 +1,12 @@
 import {joinRoom, selfId} from 'trystero'
 import type {DataPayload, JsonValue} from 'trystero'
 import type {GameIntent, GameState} from './game'
-import {coopActions, coopRoles, isCoopState, type CoopIntent, type CoopSignal, type CoopState} from './coop-game.ts'
+import {isSnakesState, snakeMapIds, type SnakesIntent, type SnakesState} from './snakes-game.ts'
+import {isLudoState, ludoColors, type LudoIntent, type LudoState} from './ludo-game.ts'
 
-export type RoomGameId = 'monopoly' | 'panic-crew'
-export type RoomIntent = GameIntent | CoopIntent
-export type RoomState = GameState | CoopState
+export type RoomGameId = 'monopoly' | 'snakes-ladders' | 'ludo'
+export type RoomIntent = GameIntent | SnakesIntent | LudoIntent
+export type RoomState = GameState | SnakesState | LudoState
 
 type NetworkCallbacks = {
   onHello: (name: string, peerId: string) => void
@@ -124,7 +125,15 @@ function isObject(value: DataPayload): value is Record<string, JsonValue> {
 
 function isIntent(value: DataPayload, gameId: RoomGameId) {
   if (!isObject(value) || typeof value.type !== 'string') return false
-  if (gameId === 'panic-crew') return isCoopIntent(value)
+  if (gameId === 'snakes-ladders') {
+    if (value.type === 'SNAKES_START' || value.type === 'SNAKES_ROLL') return true
+    return value.type === 'SNAKES_SET_MAP' && typeof value.mapId === 'string' && snakeMapIds.includes(value.mapId as (typeof snakeMapIds)[number])
+  }
+  if (gameId === 'ludo') {
+    if (value.type === 'LUDO_START' || value.type === 'LUDO_ROLL') return true
+    if (value.type === 'LUDO_MOVE') return Number.isInteger(value.tokenIndex) && Number(value.tokenIndex) >= 0 && Number(value.tokenIndex) < 4
+    return value.type === 'LUDO_SET_COLOR' && typeof value.color === 'string' && ludoColors.includes(value.color as (typeof ludoColors)[number])
+  }
   if (['START_GAME', 'ROLL_DICE', 'RESOLVE_CARD', 'BUY_ASSET', 'PASS_ASSET', 'CLOSE_AUCTION', 'PAY_JAIL_FINE', 'DECLARE_BANKRUPTCY'].includes(value.type)) return true
   if (['BUILD', 'SELL_BUILDING', 'MORTGAGE', 'REDEEM_MORTGAGE'].includes(value.type)) return Number.isInteger(value.position)
   if (value.type === 'PLACE_BID') return Number.isSafeInteger(value.amount) && Number(value.amount) >= 0
@@ -141,19 +150,12 @@ function isIntent(value: DataPayload, gameId: RoomGameId) {
 }
 
 function isRoomState(value: DataPayload, gameId: RoomGameId) {
-  if (gameId === 'panic-crew') return isCoopState(value)
+  if (gameId === 'snakes-ladders') return isSnakesState(value)
+  if (gameId === 'ludo') return isLudoState(value)
   return (
     isObject(value) &&
     (value.phase === 'lobby' || value.phase === 'playing' || value.phase === 'finished') &&
     typeof value.sequence === 'number' &&
     Array.isArray(value.players)
   )
-}
-
-function isCoopIntent(value: Record<string, JsonValue>) {
-  if (value.type === 'COOP_TOGGLE_READY' || value.type === 'COOP_START') return true
-  if (value.type === 'COOP_SET_ROLE') return typeof value.role === 'string' && coopRoles.includes(value.role as (typeof coopRoles)[number])
-  if (value.type === 'COOP_ACTION') return typeof value.action === 'string' && coopActions.some((action) => action.id === value.action)
-  if (value.type === 'COOP_SIGNAL') return typeof value.signal === 'string' && ['help', 'check-panel', 'ready', 'repeat'].includes(value.signal as CoopSignal)
-  return false
 }

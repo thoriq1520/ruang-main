@@ -25,11 +25,11 @@ export const publicPageSlugs: PublicPageSlug[] = ['tentang', 'cara-bermain', 'fa
 export const faqItems: FaqItem[] = [
   {
     question: 'Apa itu Mini Games Coop?',
-    answer: 'Mini Games Coop adalah koleksi game kasual P2P yang dimainkan langsung bersama teman dari browser.',
+    answer: 'Mini Games Coop adalah koleksi game kasual solo dan P2P yang dimainkan langsung dari browser.',
   },
   {
     question: 'Game apa yang tersedia?',
-    answer: 'Tersedia Kota Raya untuk 2-6 pemain dan Panic Crew, game kooperatif cepat untuk 2-4 pemain.',
+    answer: 'Tersedia Kota Raya untuk 2-6 pemain, Ular Tangga untuk 2-4 pemain dengan empat peta, dan Arrow Puzzle untuk permainan solo.',
   },
   {
     question: 'Apakah Mini Games Coop gratis?',
@@ -41,7 +41,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Apakah data permainan disimpan?',
-    answer: 'Tidak. State room berada di memori browser host dan hilang ketika sesi selesai atau host keluar.',
+    answer: 'Tidak. State permainan hanya berada di memori browser dan hilang ketika sesi selesai, tab ditutup, atau halaman dimuat ulang.',
   },
   {
     question: 'Mengapa room tidak dapat ditemukan?',
@@ -64,12 +64,12 @@ export const faqItems: FaqItem[] = [
 export const publicPages: Record<PublicPageSlug, PublicPage> = {
   tentang: {
     title: 'Game di Mini Games Coop',
-    description: 'Mini Games Coop adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan bersama teman tanpa instalasi dan akun.',
+    description: 'Mini Games Coop adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi dan akun.',
     sections: [
       {
-        heading: 'Dua cara bermain bersama',
+        heading: 'Solo atau bersama teman',
         paragraphs: [
-          'Kota Raya adalah game strategi papan untuk 2-6 pemain. Panic Crew adalah game kooperatif untuk 2-4 pemain dengan panel dan informasi yang berbeda pada setiap layar.',
+          'Kota Raya adalah game strategi papan untuk 2-6 pemain. Ular Tangga adalah balapan P2P untuk 2-4 pemain dengan empat pilihan peta. Arrow Puzzle adalah tantangan logika solo dengan level yang hanya bertahan selama sesi.',
           'Setiap game di Mini Games Coop dirancang untuk sesi singkat bersama teman, tanpa registrasi dan tanpa progres akun permanen.',
         ],
       },
@@ -79,7 +79,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
         bullets: [
           'Tanpa registrasi atau profil permanen',
           'State permainan sementara',
-          'Komunikasi antar-browser melalui WebRTC',
+          'Komunikasi game multipemain melalui WebRTC',
           'Aturan dan angka permainan dijelaskan di antarmuka',
         ],
       },

@@ -32,57 +32,44 @@ import {
   type GameIntent,
   type GameState,
 } from './game'
-import {
-  addCoopPlayer,
-  canStartCoop,
-  COOP_SESSION_MS,
-  coopActions,
-  coopRoleLabel,
-  coopRoles,
-  createCoopDemo,
-  createCoopLobby,
-  isCoopState,
-  performCoopAction,
-  removeCoopPlayer,
-  sendCoopSignal,
-  setCoopRole,
-  startCoop,
-  tickCoop,
-  toggleCoopReady,
-  type CoopActionId,
-  type CoopCrisis,
-  type CoopIntent,
-  type CoopRole,
-  type CoopSignal,
-  type CoopState,
-} from './coop-game'
-import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId} from './network'
+import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network'
 import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './site-content'
+import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './arrow-game'
+import {arrowGameScreen, drawArrowBoard} from './arrow-view'
+import {gameById, gameCard, gameCatalog, type GameId} from './game-catalog'
+import {copyIcon, escapeHtml, initial, logoMark} from './ui'
+import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakesIntent, type SnakesState} from './snakes-game'
+import {snakesGameScreen, snakesLobbyScreen} from './snakes-view'
+import {addLudoPlayer, createLudoDemo, createLudoLobby, isLudoState, ludoColors, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoState} from './ludo-game'
+import {ludoGameScreen, ludoLobbyScreen} from './ludo-view'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let game: GameState | null = null
-let coopGame: CoopState | null = null
+let arrowGame: ArrowGameState | null = null
+let snakesGame: SnakesState | null = null
+let ludoGame: LudoState | null = null
 let network: NetworkSession | null = null
 let localPeerId = ''
 let activeRoomCode = ''
 let isHost = false
 let isDemo = false
-let selectedGameId: RoomGameId = 'monopoly'
+const requestedGameId = new URLSearchParams(location.search).get('game')
+let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let demoCoopRole: CoopRole = 'navigation'
-let view: 'home' | 'lobby' | 'game' | 'coop-lobby' | 'coop-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
 let lastAnimatedRollSequence = -1
+let lastAnimatedSnakesMoveSequence = -1
+let lastAnimatedLudoMoveSequence = -1
 let auctionClock = 0
-let coopClock = 0
 let joinTimer = 0
 
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
 window.addEventListener('hashchange', () => {
-  if (!game && !coopGame && view === 'home') render()
+  if (!game && !arrowGame && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
@@ -93,58 +80,52 @@ function render() {
   }
   else if (view === 'lobby') renderLobby()
   else if (view === 'game') renderGame()
-  else if (view === 'coop-lobby') renderCoopLobby()
-  else renderCoopGame()
+  else if (view === 'arrow-game') renderArrowGame()
+  else if (view === 'snakes-lobby') renderSnakesLobby()
+  else if (view === 'snakes-game') renderSnakesGame()
+  else if (view === 'ludo-lobby') renderLudoLobby()
+  else renderLudoGame()
 }
 
 function renderHome() {
   lastAnimatedRollSequence = -1
   updateDocumentMeta()
-  const isCoop = selectedGameId === 'panic-crew'
-  const gameName = isCoop ? 'Panic Crew' : 'Kota Raya'
-  const gameDescription = isCoop
-    ? 'Jaga stasiun bersama 2-4 kru. Setiap pemain mendapat panel dan informasi yang berbeda.'
-    : 'Kuasai aset kota bersama 2-6 pemain. Buat room baru atau masuk dengan kode teman.'
+  const selectedGame = gameById(selectedGameId)
+  const isSolo = selectedGame.mode === 'solo'
   app.innerHTML = `
     ${publicHeader()}
 
     <main id="main-content" class="home-layout">
       <section class="hero-panel" aria-labelledby="hero-title">
-        <p class="eyebrow">MINI GAME P2P</p>
+        <p class="eyebrow">MINI GAME BROWSER</p>
         <h1 id="hero-title">Main bareng.<br><span>Tanpa ribet.</span></h1>
-        <p class="hero-copy">Buat room, bagikan kode, lalu main langsung dari browser tanpa akun dan penyimpanan permanen.</p>
+        <p class="hero-copy">Pilih permainan solo atau buat room bersama teman, langsung dari browser tanpa akun dan penyimpanan permanen.</p>
         <div class="feature-row" aria-label="Fitur utama">
-          <span>2-6 pemain</span>
-          <span>Koneksi WebRTC</span>
+          <span>Solo dan multipemain</span>
+          <span>Langsung di browser</span>
           <span>Data sementara</span>
         </div>
         <div class="game-fan" aria-label="Koleksi Mini Games Coop">
-          <button class="game-card game-card-option game-card-monopoly ${isCoop ? '' : 'is-selected'}" type="button" data-select-game="monopoly" aria-label="Pilih game Kota Raya" aria-pressed="${!isCoop}">
-            <span class="game-card-top"><small>GAME 01</small><i>2-6</i></span>
-            <span class="game-card-board" aria-hidden="true"><i></i><i></i><b>KR</b><i></i><i></i></span>
-            <strong>Kota Raya</strong>
-            <small>Strategi papan</small>
-          </button>
-          <button class="game-card game-card-option game-card-panic ${isCoop ? 'is-selected' : ''}" type="button" data-select-game="panic-crew" aria-label="Pilih game Panic Crew" aria-pressed="${isCoop}">
-            <span class="game-card-top"><small>GAME 02</small><i>2-4</i></span>
-            <span class="game-card-console" aria-hidden="true"><b>73</b><i></i><i></i><i></i></span>
-            <strong>Panic Crew</strong>
-            <small>Kooperatif cepat</small>
-          </button>
+          ${gameCatalog.map((item, index) => gameCard(item, index, item.id === selectedGameId)).join('')}
         </div>
       </section>
 
       <section class="join-panel" id="selected-game" aria-labelledby="join-title">
         <div>
-          <p class="step-label">Game terpilih / ${gameName}</p>
-          <h2 id="join-title">Masuk ke meja</h2>
-          <p class="muted">${gameDescription}</p>
+          <p class="step-label">Game terpilih / ${selectedGame.name}</p>
+          <h2 id="join-title">${isSolo ? 'Mulai puzzle' : 'Masuk ke meja'}</h2>
+          <p class="muted">${selectedGame.description}</p>
         </div>
 
         ${homeNotice ? `<p class="notice" role="alert">${escapeHtml(homeNotice)}</p>` : ''}
 
-        <form id="room-form" novalidate>
-          <button class="button button-primary" type="button" id="create-room">Buat room ${gameName}</button>
+        ${isSolo ? `
+          <div class="solo-start">
+            <button class="button button-primary" type="button" id="start-solo">Mulai Arrow Puzzle</button>
+            <p>Level dimulai dari awal setiap kali halaman dimuat ulang.</p>
+          </div>
+        ` : `<form id="room-form" novalidate>
+          <button class="button button-primary" type="button" id="create-room">Buat room ${selectedGame.name}</button>
 
           <div class="divider"><span>atau gabung teman</span></div>
 
@@ -154,14 +135,20 @@ function renderHome() {
           </div>
 
           <button class="button button-secondary" type="submit" id="join-room">Gabung room</button>
-          <button class="text-button" type="button" id="open-demo">Coba demo ${gameName}</button>
+          <button class="text-button" type="button" id="open-demo">Coba demo ${selectedGame.name}</button>
           <p id="form-error" class="form-error" role="alert"></p>
-        </form>
+        </form>`}
 
         <ol class="steps" aria-label="Cara bermain">
-          <li><span>1</span><p><strong>Buat kode</strong><small>Host membuat meja permainan.</small></p></li>
-          <li><span>2</span><p><strong>Undang teman</strong><small>Bagikan satu kode room.</small></p></li>
-          <li><span>3</span><p><strong>Main langsung</strong><small>Data bergerak antar-browser.</small></p></li>
+          ${isSolo ? `
+            <li><span>1</span><p><strong>Baca arah</strong><small>Cari jalur yang tidak terhalang.</small></p></li>
+            <li><span>2</span><p><strong>Lepaskan panah</strong><small>Ketuk panah yang dapat keluar.</small></p></li>
+            <li><span>3</span><p><strong>Bersihkan papan</strong><small>Simpan tiga nyawa sampai akhir.</small></p></li>
+          ` : `
+            <li><span>1</span><p><strong>Buat kode</strong><small>Host membuat meja permainan.</small></p></li>
+            <li><span>2</span><p><strong>Undang teman</strong><small>Bagikan satu kode room.</small></p></li>
+            <li><span>3</span><p><strong>Main langsung</strong><small>Data bergerak antar-browser.</small></p></li>
+          `}
         </ol>
       </section>
     </main>
@@ -169,7 +156,7 @@ function renderHome() {
     ${homeSupport()}
     ${publicFooter()}
 
-    <dialog class="asset-dialog name-dialog" id="name-dialog" aria-labelledby="name-dialog-title">
+    ${isSolo ? '' : `<dialog class="asset-dialog name-dialog" id="name-dialog" aria-labelledby="name-dialog-title">
       <form id="name-form" novalidate>
         <p class="step-label" id="name-dialog-mode">Buat room baru</p>
         <h2 id="name-dialog-title">Nama pemain</h2>
@@ -185,8 +172,19 @@ function renderHome() {
           <button class="button button-primary" type="submit" id="confirm-name">Buat room</button>
         </div>
       </form>
-    </dialog>
+    </dialog>`}
   `
+
+  document.querySelectorAll<HTMLButtonElement>('[data-select-game]').forEach((button) => button.addEventListener('click', () => {
+    selectedGameId = button.dataset.selectGame as GameId
+    renderHome()
+    document.querySelector<HTMLElement>(gameById(selectedGameId).mode === 'solo' ? '#start-solo' : '#create-room')?.focus({preventScroll: true})
+  }))
+
+  if (isSolo) {
+    document.querySelector('#start-solo')?.addEventListener('click', startArrowGame)
+    return
+  }
 
   let pendingHost = true
   const nameDialog = document.querySelector<HTMLDialogElement>('#name-dialog')!
@@ -204,7 +202,7 @@ function renderHome() {
     pendingHost = host
     formError.textContent = ''
     nameError.textContent = ''
-    document.querySelector('#name-dialog-mode')!.textContent = host ? `Buat room ${gameName}` : `Gabung ${gameName}`
+    document.querySelector('#name-dialog-mode')!.textContent = host ? `Buat room ${selectedGame.name}` : `Gabung ${selectedGame.name}`
     document.querySelector('#confirm-name')!.textContent = host ? 'Buat room' : 'Gabung room'
     nameDialog.showModal()
     nameInput.focus()
@@ -215,11 +213,6 @@ function renderHome() {
   })
   codeInput.addEventListener('input', () => (codeInput.value = normalizeRoomCode(codeInput.value)))
   document.querySelector('#create-room')!.addEventListener('click', () => openNameDialog(true))
-  document.querySelectorAll<HTMLButtonElement>('[data-select-game]').forEach((button) => button.addEventListener('click', () => {
-    selectedGameId = button.dataset.selectGame as RoomGameId
-    renderHome()
-    document.querySelector<HTMLButtonElement>('#create-room')?.focus({preventScroll: true})
-  }))
   document.querySelector('#cancel-name')!.addEventListener('click', () => nameDialog.close())
   document.querySelector<HTMLFormElement>('#name-form')!.addEventListener('submit', (event) => {
     event.preventDefault()
@@ -233,6 +226,58 @@ function renderHome() {
     startOnline(pendingHost, name, codeInput.value)
   })
   document.querySelector('#open-demo')!.addEventListener('click', openDemo)
+}
+
+function startArrowGame() {
+  arrowGame = createArrowGame()
+  game = null
+  snakesGame = null
+  ludoGame = null
+  network = null
+  homeNotice = ''
+  view = 'arrow-game'
+  render()
+  window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function renderArrowGame() {
+  if (!arrowGame) return startArrowGame()
+  updateDocumentMeta('Arrow Puzzle - Mini Games Coop', 'Game puzzle solo sementara yang dimainkan langsung dari browser.')
+  app.innerHTML = arrowGameScreen(arrowGame)
+  drawArrowBoard(arrowGame)
+  bindLeaveButtons()
+
+  document.querySelectorAll<HTMLButtonElement>('[data-arrow-id]').forEach((button) => button.addEventListener('click', () => {
+    const id = button.dataset.arrowId!
+    if (!arrowGame) return
+    if (!isArrowFree(arrowGame, id)) {
+      arrowGame = releaseArrow(arrowGame, id)
+      renderArrowGame()
+      return
+    }
+    button.classList.add('is-releasing')
+    document.querySelectorAll<HTMLButtonElement>('[data-arrow-id]').forEach((arrowButton) => (arrowButton.disabled = true))
+    window.setTimeout(() => {
+      if (!arrowGame) return
+      arrowGame = releaseArrow(arrowGame, id)
+      renderArrowGame()
+    }, reducedMotion() ? 0 : 220)
+  }))
+  document.querySelector('#hint-arrow')?.addEventListener('click', () => {
+    if (!arrowGame) return
+    arrowGame = hintArrow(arrowGame)
+    renderArrowGame()
+  })
+  document.querySelectorAll('[data-restart-arrow]').forEach((button) => button.addEventListener('click', () => {
+    if (!arrowGame) return
+    arrowGame = createArrowGame(arrowGame.level)
+    renderArrowGame()
+  }))
+  document.querySelector('#next-arrow-level')?.addEventListener('click', () => {
+    if (!arrowGame) return
+    arrowGame = createArrowGame(arrowGame.level + 1)
+    renderArrowGame()
+  })
 }
 
 function publicPageFromHash(): PublicPageSlug | null {
@@ -254,7 +299,7 @@ function publicHeader(active?: PublicPageSlug) {
     <nav class="public-nav" aria-label="Navigasi informasi">
       ${links.map(([slug, label]) => `<a href="#${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
     </nav>
-    <span class="status-chip"><span class="status-dot"></span> P2P sementara</span>
+    <span class="status-chip"><span class="status-dot"></span> Data sementara</span>
   </header>`
 }
 
@@ -339,7 +384,7 @@ function publicFooter() {
   return `<footer class="site-footer">
     <div>
       <a class="brand" href="#">${logoMark()}<span>Mini Games Coop</span></a>
-      <p>Koleksi mini game P2P untuk dimainkan bersama teman.</p>
+      <p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p>
     </div>
     <nav aria-label="Navigasi footer">
       <a href="#tentang">Tentang</a>
@@ -353,7 +398,7 @@ function publicFooter() {
   </footer>`
 }
 
-function updateDocumentMeta(title = 'Mini Games Coop - Main Bareng dari Browser', description = 'Koleksi mini game P2P sementara untuk dimainkan bersama teman tanpa akun dan database.') {
+function updateDocumentMeta(title = 'Mini Games Coop - Main Langsung dari Browser', description = 'Koleksi mini game solo dan P2P sementara tanpa akun dan database.') {
   document.title = title
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description)
 }
@@ -411,188 +456,70 @@ function renderLobby() {
   document.querySelector('#start-game')?.addEventListener('click', () => applyIntent({type: 'START_GAME'}, localPeerId))
 }
 
-function renderCoopLobby() {
-  const state = coopGame
-  const players = state?.players ?? []
-  const localPlayer = state?.players.find((player) => player.id === localPeerId)
-  const canStart = Boolean(state && isHost && canStartCoop(state))
-  app.innerHTML = `
-    <header class="site-header compact-header coop-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
-      <span class="game-id">Panic Crew</span>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
-    <main id="main-content" class="coop-lobby-shell">
-      <section class="coop-lobby-card" aria-labelledby="coop-lobby-title">
-        <div class="coop-lobby-intro">
-          <div>
-            <h1 id="coop-lobby-title">${state ? 'Ruang kru' : 'Menghubungkan...'}</h1>
-            <p>Ambil satu panel, lalu tunggu kru lain. Panel yang sudah dipilih akan terkunci.</p>
-          </div>
-          <div class="coop-room-code">
-            <span>Kode room</span>
-            <strong>${escapeHtml(activeRoomCode)}</strong>
-            <button class="icon-button" type="button" id="copy-code" aria-label="Salin kode room">${copyIcon()}</button>
-          </div>
-        </div>
-
-        ${state ? `
-          <div class="coop-lobby-body">
-            <section class="coop-roster-panel" aria-labelledby="coop-roster-title">
-              <header>
-                <h2 id="coop-roster-title">Kru</h2>
-                <span>${players.length}/4 terisi</span>
-              </header>
-              <div class="coop-roster">
-                ${players.map((player) => `
-                  <article class="coop-crew-row ${player.ready ? 'is-ready' : ''}">
-                    <span class="crew-initial">${initial(player.name)}</span>
-                    <div><strong>${escapeHtml(player.name)}</strong><small>${player.role ? coopRoleLabel[player.role] : 'Belum memilih panel'}</small></div>
-                    <span>${player.ready ? 'Siap' : 'Menunggu'}</span>
-                  </article>
-                `).join('')}
-                ${Array.from({length: Math.max(0, 4 - players.length)}, (_, index) => `
-                  <div class="coop-empty-slot">
-                    <span>${String(players.length + index + 1).padStart(2, '0')}</span>
-                    <p><strong>Slot terbuka</strong><small>Menunggu pemain</small></p>
-                  </div>
-                `).join('')}
-              </div>
-            </section>
-
-            <div class="coop-role-picker">
-              <label for="coop-role">Panel kamu</label>
-              <select id="coop-role" ${localPlayer ? '' : 'disabled'}>
-                <option value="">Pilih peran</option>
-                ${coopRoles.map((role) => {
-                  const occupied = players.some((player) => player.id !== localPeerId && player.role === role)
-                  return `<option value="${role}" ${localPlayer?.role === role ? 'selected' : ''} ${occupied ? 'disabled' : ''}>${coopRoleLabel[role]}${occupied ? ' - dipakai' : ''}</option>`
-                }).join('')}
-              </select>
-              <p>${localPlayer?.role ? coopRoleDescription(localPlayer.role) : 'Setiap panel memiliki informasi dan tombol yang berbeda.'}</p>
-              <button class="button ${localPlayer?.ready ? 'button-secondary' : 'button-primary'}" type="button" id="coop-ready" ${localPlayer?.role ? '' : 'disabled'}>${localPlayer?.ready ? 'Batalkan siap' : 'Saya siap'}</button>
-            </div>
-          </div>
-
-          <div class="coop-lobby-actions">
-            ${isHost
-              ? `<button class="button button-primary" id="start-coop" type="button" ${canStart ? '' : 'disabled'}>Mulai misi</button>
-                 <p>${canStart ? 'Seluruh kru siap.' : 'Butuh 2-4 kru dengan panel berbeda.'}</p>`
-              : '<p><span class="status-dot"></span> Menunggu host memulai misi.</p>'}
-          </div>
-        ` : '<div class="connecting-state"><span class="spinner"></span><p>Menghubungkan ke ruang kendali...</p></div>'}
-      </section>
-    </main>
-  `
-
+function renderSnakesLobby() {
+  app.innerHTML = snakesLobbyScreen(snakesGame, activeRoomCode, isHost, localPeerId)
   bindLeaveButtons()
   document.querySelector('#copy-code')?.addEventListener('click', copyRoomCode)
-  document.querySelector<HTMLSelectElement>('#coop-role')?.addEventListener('change', (event) => {
-    const role = (event.currentTarget as HTMLSelectElement).value as CoopRole
-    if (coopRoles.includes(role)) requestCoopIntent({type: 'COOP_SET_ROLE', role})
-  })
-  document.querySelector('#coop-ready')?.addEventListener('click', () => requestCoopIntent({type: 'COOP_TOGGLE_READY'}))
-  document.querySelector('#start-coop')?.addEventListener('click', () => requestCoopIntent({type: 'COOP_START'}))
+  document.querySelectorAll<HTMLButtonElement>('[data-snake-map]').forEach((button) => button.addEventListener('click', () => {
+    const mapId = button.dataset.snakeMap as SnakeMapId
+    if (snakeMapIds.includes(mapId)) requestSnakesIntent({type: 'SNAKES_SET_MAP', mapId})
+  }))
+  document.querySelector('#start-snakes')?.addEventListener('click', () => requestSnakesIntent({type: 'SNAKES_START'}))
 }
 
-function renderCoopGame() {
-  window.clearInterval(coopClock)
-  const state = coopGame
-  if (!state) {
-    view = 'coop-lobby'
-    renderCoopLobby()
-    return
+function renderSnakesGame() {
+  if (!snakesGame) {
+    view = 'snakes-lobby'
+    return renderSnakesLobby()
   }
-  const localPlayer = state.players.find((player) => player.id === localPeerId)
-  const role = isDemo ? demoCoopRole : localPlayer?.role ?? null
-  const signalPlayer = state.latestSignal ? state.players.find((player) => player.id === state.latestSignal?.playerId) : null
-
-  if (state.phase === 'finished') {
-    const result = state.outcome === 'survived'
-      ? ['Bantuan tiba', 'Kru berhasil menjaga stasiun sampai akhir misi.']
-      : state.outcome === 'crew-left'
-        ? ['Kru terputus', 'Misi dihentikan karena jumlah kru tidak mencukupi.']
-        : ['Stasiun jatuh', 'Integritas habis sebelum bantuan tiba.']
-    app.innerHTML = `
-      <header class="site-header compact-header coop-header"><a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a><span class="game-id">Panic Crew</span></header>
-      <main id="main-content" class="coop-result-shell">
-        <section class="coop-result-card">
-          <p class="step-label">Misi selesai</p>
-          <h1>${result[0]}</h1>
-          <p>${result[1]}</p>
-          <dl><div><dt>Skor tim</dt><dd>${state.score.toLocaleString('id-ID')}</dd></div><div><dt>Gelombang</dt><dd>${state.wave}</dd></div></dl>
-          <button class="button button-primary" type="button" data-leave>Kembali ke beranda</button>
-        </section>
-      </main>`
-    bindLeaveButtons()
-    return
-  }
-
-  const actions = role ? coopActions.filter((action) => action.role === role) : []
-  app.innerHTML = `
-    <header class="game-header coop-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
-      <div class="coop-mission-name"><strong>Panic Crew</strong><span>${isDemo ? 'Simulasi lokal' : escapeHtml(activeRoomCode)}</span></div>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
-
-    <main id="main-content" class="coop-game-shell">
-      <section class="coop-status" aria-label="Status misi">
-        <div class="coop-health"><span>Integritas</span><strong>${state.health}%</strong><meter min="0" max="100" low="30" high="70" optimum="100" value="${state.health}">${state.health}%</meter></div>
-        <div><span>Skor tim</span><strong>${state.score.toLocaleString('id-ID')}</strong></div>
-        <div><span>Gelombang</span><strong>${state.wave}</strong></div>
-        <div><span>Bantuan tiba</span><strong id="mission-time">--:--</strong></div>
-      </section>
-
-      <section class="coop-crisis-board" aria-labelledby="crisis-title">
-        <header><div><p class="step-label">Krisis aktif</p><h1 id="crisis-title">Baca, lalu bicara</h1></div><span>${state.activeCrises.length} aktif</span></header>
-        <div class="coop-crisis-list" aria-live="polite">
-          ${state.activeCrises.length
-            ? state.activeCrises.map((crisis) => coopCrisisCard(crisis, role)).join('')
-            : '<div class="coop-clear-state"><strong>Panel stabil</strong><p>Gunakan waktu ini untuk memastikan semua kru siap.</p></div>'}
-        </div>
-      </section>
-
-      <section class="coop-station" aria-label="Status kru">
-        <div class="station-core"><span>PC</span><strong>${state.health}</strong><small>integritas</small></div>
-        <div class="station-crew">
-          ${state.players.map((player) => `<div class="station-role ${player.role === role ? 'is-local' : ''}"><span>${player.role ? coopRoleLabel[player.role] : 'Tanpa panel'}</span><strong>${escapeHtml(player.name)}</strong></div>`).join('')}
-        </div>
-        ${state.latestSignal ? `<p class="coop-signal-feed" role="status"><strong>${escapeHtml(signalPlayer?.name ?? 'Kru')}:</strong> ${coopSignalLabel(state.latestSignal.signal)}</p>` : '<p class="coop-signal-feed">Belum ada sinyal kru.</p>'}
-      </section>
-
-      <section class="coop-controls" aria-labelledby="control-title">
-        <header>
-          <div><p class="step-label">Panel aktif</p><h2 id="control-title">${role ? coopRoleLabel[role] : 'Tanpa peran'}</h2></div>
-          ${isDemo ? `<label class="demo-role-picker" for="demo-role">Uji panel<select id="demo-role">${coopRoles.map((item) => `<option value="${item}" ${role === item ? 'selected' : ''}>${coopRoleLabel[item]}</option>`).join('')}</select></label>` : ''}
-        </header>
-        <p class="coop-panel-copy">${role ? coopRoleDescription(role) : 'Kembali ke lobby dan pilih satu panel.'}</p>
-        <div class="coop-action-grid">
-          ${actions.map((action) => `<button type="button" data-coop-action="${action.id}"><strong>${action.label}</strong><span>${action.hint}</span></button>`).join('')}
-        </div>
-        <div class="coop-signals" aria-label="Sinyal cepat">
-          <button type="button" data-coop-signal="help">Butuh bantuan</button>
-          <button type="button" data-coop-signal="check-panel">Cek panelmu</button>
-          <button type="button" data-coop-signal="ready">Siap</button>
-          <button type="button" data-coop-signal="repeat">Ulangi kode</button>
-        </div>
-      </section>
-
-      <section class="coop-log" aria-labelledby="coop-log-title">
-        <h2 id="coop-log-title">Catatan misi</h2>
-        <ol>${state.log.slice(-6).reverse().map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}</ol>
-      </section>
-    </main>
-  `
-
+  const canRoll = snakesGame.phase === 'playing' && (isDemo || snakesGame.currentPlayerId === localPeerId)
+  const moveSequence = snakesGame.lastMove?.sequence ?? -1
+  const animateMove = moveSequence > lastAnimatedSnakesMoveSequence
+  app.innerHTML = snakesGameScreen(snakesGame, activeRoomCode || 'DEMO', canRoll, isDemo, animateMove)
+  lastAnimatedSnakesMoveSequence = Math.max(lastAnimatedSnakesMoveSequence, moveSequence)
   bindLeaveButtons()
-  document.querySelectorAll<HTMLButtonElement>('[data-coop-action]').forEach((button) => button.addEventListener('click', () => requestCoopAction(button.dataset.coopAction as CoopActionId)))
-  document.querySelectorAll<HTMLButtonElement>('[data-coop-signal]').forEach((button) => button.addEventListener('click', () => requestCoopIntent({type: 'COOP_SIGNAL', signal: button.dataset.coopSignal as CoopSignal})))
-  document.querySelector<HTMLSelectElement>('#demo-role')?.addEventListener('change', (event) => {
-    demoCoopRole = (event.currentTarget as HTMLSelectElement).value as CoopRole
-    renderCoopGame()
+  document.querySelector<HTMLButtonElement>('#roll-snakes')?.addEventListener('click', (event) => {
+    const button = event.currentTarget as HTMLButtonElement
+    button.disabled = true
+    button.textContent = 'Mengirim lemparan...'
+    requestSnakesIntent({type: 'SNAKES_ROLL'}, snakesGame?.currentPlayerId ?? localPeerId)
   })
-  startCoopClock()
+}
+
+function renderLudoLobby() {
+  app.innerHTML = ludoLobbyScreen(ludoGame, activeRoomCode, isHost, localPeerId)
+  bindLeaveButtons()
+  document.querySelector('#copy-code')?.addEventListener('click', copyRoomCode)
+  document.querySelectorAll<HTMLButtonElement>('[data-ludo-color]').forEach((button) => button.addEventListener('click', () => {
+    const color = button.dataset.ludoColor as LudoColor
+    if (ludoColors.includes(color)) requestLudoIntent({type: 'LUDO_SET_COLOR', color})
+  }))
+  document.querySelector('#start-ludo')?.addEventListener('click', () => requestLudoIntent({type: 'LUDO_START'}))
+}
+
+function renderLudoGame() {
+  if (!ludoGame) {
+    view = 'ludo-lobby'
+    return renderLudoLobby()
+  }
+  const localTurn = isDemo || ludoGame.currentPlayerId === localPeerId
+  const canRoll = ludoGame.phase === 'playing' && localTurn && ludoGame.pendingRoll === null
+  const canChoose = ludoGame.phase === 'playing' && localTurn && ludoGame.pendingRoll !== null
+  const movable = ludoGame.currentPlayerId ? movableLudoTokens(ludoGame, ludoGame.currentPlayerId) : []
+  const moveSequence = ludoGame.lastMove?.sequence ?? -1
+  const animateMove = moveSequence > lastAnimatedLudoMoveSequence
+  app.innerHTML = ludoGameScreen(ludoGame, activeRoomCode || 'DEMO', canRoll, canChoose, movable, isDemo, animateMove)
+  lastAnimatedLudoMoveSequence = Math.max(lastAnimatedLudoMoveSequence, moveSequence)
+  bindLeaveButtons()
+  document.querySelector<HTMLButtonElement>('#roll-ludo')?.addEventListener('click', (event) => {
+    const button = event.currentTarget as HTMLButtonElement
+    button.disabled = true
+    button.textContent = 'Mengirim lemparan...'
+    requestLudoIntent({type: 'LUDO_ROLL'}, ludoGame?.currentPlayerId ?? localPeerId)
+  })
+  document.querySelectorAll<HTMLButtonElement>('[data-ludo-token]').forEach((button) => button.addEventListener('click', () => {
+    requestLudoIntent({type: 'LUDO_MOVE', tokenIndex: Number(button.dataset.ludoToken)}, ludoGame?.currentPlayerId ?? localPeerId)
+  }))
 }
 
 function renderGame() {
@@ -795,6 +722,7 @@ function centerActiveCellOnMobile(state: GameState) {
 }
 
 function startOnline(host: boolean, rawName: string, rawCode: string) {
+  if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -818,10 +746,18 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
   network = connectRoom(code, name, activeGameId, {
     onHello: (peerName, peerId) => {
       if (!isHost) return
-      if (activeGameId === 'panic-crew' && coopGame) {
-        const next = addCoopPlayer(coopGame, peerId, peerName)
-        if (next === coopGame) return
-        coopGame = next
+      if (activeGameId === 'ludo' && ludoGame) {
+        const next = addLudoPlayer(ludoGame, peerId, peerName)
+        if (next === ludoGame) return
+        ludoGame = next
+        publishState()
+        render()
+        return
+      }
+      if (activeGameId === 'snakes-ladders' && snakesGame) {
+        const next = addSnakesPlayer(snakesGame, peerId, peerName)
+        if (next === snakesGame) return
+        snakesGame = next
         publishState()
         render()
         return
@@ -837,20 +773,28 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
     },
     onIntent: (intent, peerId) => {
       if (!isHost) return
-      if (isCoopIntent(intent)) applyCoopIntent(intent, peerId)
+      if (isSnakesIntent(intent)) applySnakesIntent(intent, peerId)
+      else if (isLudoIntent(intent)) applyLudoIntent(intent, peerId)
       else applyIntent(intent, peerId)
     },
     onSnapshot: (snapshot, peerId) => {
       if (isHost || snapshot.hostId !== peerId) return
       window.clearTimeout(joinTimer)
-      if (isCoopState(snapshot)) {
-        if (coopGame && snapshot.sequence < coopGame.sequence) return
-        const enteredMission = coopGame?.phase === 'lobby' && snapshot.phase === 'playing'
+      if (isLudoState(snapshot)) {
+        if (ludoGame && snapshot.sequence < ludoGame.sequence) return
+        ludoGame = snapshot
+        snakesGame = null
         game = null
-        coopGame = snapshot
-        view = snapshot.phase === 'lobby' ? 'coop-lobby' : 'coop-game'
+        view = snapshot.phase === 'lobby' ? 'ludo-lobby' : 'ludo-game'
         render()
-        if (enteredMission) window.scrollTo({top: 0, behavior: 'auto'})
+        return
+      }
+      if (isSnakesState(snapshot)) {
+        if (snakesGame && snapshot.sequence < snakesGame.sequence) return
+        snakesGame = snapshot
+        game = null
+        view = snapshot.phase === 'lobby' ? 'snakes-lobby' : 'snakes-game'
+        render()
         return
       }
       if (game && snapshot.sequence < game.sequence) return
@@ -868,14 +812,18 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
     },
     onPeerDisconnect: () => showToast('Koneksi peer terputus. Mencoba sambung ulang…'),
     onPeerLeave: (peerId) => {
-      const hostId = coopGame?.hostId ?? game?.hostId
+      const hostId = ludoGame?.hostId ?? snakesGame?.hostId ?? game?.hostId
       if (!hostId) return
       if (!isHost && peerId === hostId) {
         void leaveToHome('Host meninggalkan permainan.')
         return
       }
-      if (isHost && activeGameId === 'panic-crew' && coopGame) {
-        coopGame = removeCoopPlayer(coopGame, peerId)
+      if (isHost && activeGameId === 'ludo' && ludoGame) {
+        ludoGame = removeLudoPlayer(ludoGame, peerId)
+        publishState()
+        render()
+      } else if (isHost && activeGameId === 'snakes-ladders' && snakesGame) {
+        snakesGame = removeSnakesPlayer(snakesGame, peerId)
         publishState()
         render()
       } else if (isHost && game) {
@@ -888,32 +836,49 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
   })
   localPeerId = network.selfId
   game = activeGameId === 'monopoly' && host ? createLobby(localPeerId, name) : null
-  coopGame = activeGameId === 'panic-crew' && host ? createCoopLobby(localPeerId, name) : null
+  snakesGame = activeGameId === 'snakes-ladders' && host ? createSnakesLobby(localPeerId, name) : null
+  ludoGame = activeGameId === 'ludo' && host ? createLudoLobby(localPeerId, name) : null
   window.clearTimeout(joinTimer)
   if (!host) joinTimer = window.setTimeout(() => {
-    if (!game && !isHost) void leaveToHome('Room tidak ditemukan atau koneksi P2P melewati batas waktu.')
+    if (!game && !snakesGame && !ludoGame && !isHost) void leaveToHome('Room tidak ditemukan atau koneksi P2P melewati batas waktu.')
   }, 15_000)
-  view = activeGameId === 'panic-crew' ? 'coop-lobby' : 'lobby'
+  view = activeGameId === 'snakes-ladders' ? 'snakes-lobby' : activeGameId === 'ludo' ? 'ludo-lobby' : 'lobby'
   render()
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
 function openDemo() {
+  if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   activeGameId = selectedGameId
-  if (activeGameId === 'panic-crew') {
-    coopGame = createCoopDemo()
+  if (activeGameId === 'ludo') {
+    ludoGame = createLudoDemo()
+    snakesGame = null
     game = null
     localPeerId = 'demo-0'
     activeRoomCode = 'DEMO'
     isHost = true
     isDemo = true
-    view = 'coop-game'
+    view = 'ludo-game'
+    render()
+    window.scrollTo({top: 0, behavior: 'auto'})
+    return
+  }
+  if (activeGameId === 'snakes-ladders') {
+    snakesGame = createSnakesDemo()
+    ludoGame = null
+    game = null
+    localPeerId = 'demo-0'
+    activeRoomCode = 'DEMO'
+    isHost = true
+    isDemo = true
+    view = 'snakes-game'
     render()
     window.scrollTo({top: 0, behavior: 'auto'})
     return
   }
   game = createDemoGame()
-  coopGame = null
+  snakesGame = null
+  ludoGame = null
   localPeerId = 'demo-0'
   activeRoomCode = 'DEMO'
   isHost = true
@@ -923,28 +888,49 @@ function openDemo() {
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
-function isCoopIntent(intent: GameIntent | CoopIntent): intent is CoopIntent {
-  return intent.type.startsWith('COOP_')
+function isSnakesIntent(intent: RoomIntent): intent is SnakesIntent {
+  return intent.type.startsWith('SNAKES_')
 }
 
-function applyCoopIntent(intent: CoopIntent, requesterId: string) {
-  if (!coopGame) return
-  const before = coopGame
-  let next: CoopState
-  switch (intent.type) {
-    case 'COOP_SET_ROLE': next = setCoopRole(coopGame, requesterId, intent.role); break
-    case 'COOP_TOGGLE_READY': next = toggleCoopReady(coopGame, requesterId); break
-    case 'COOP_START': next = startCoop(coopGame, requesterId); break
-    case 'COOP_ACTION': next = performCoopAction(coopGame, requesterId, intent.action); break
-    case 'COOP_SIGNAL': next = sendCoopSignal(coopGame, requesterId, intent.signal); break
-  }
-  if (next === before) return
-  const enteredMission = before.phase === 'lobby' && next.phase === 'playing'
-  coopGame = next
-  view = next.phase === 'lobby' ? 'coop-lobby' : 'coop-game'
+function isLudoIntent(intent: RoomIntent): intent is LudoIntent {
+  return intent.type.startsWith('LUDO_')
+}
+
+function applySnakesIntent(intent: SnakesIntent, requesterId: string) {
+  if (!snakesGame) return
+  const before = snakesGame
+  if (intent.type === 'SNAKES_SET_MAP') snakesGame = setSnakesMap(snakesGame, requesterId, intent.mapId)
+  else if (intent.type === 'SNAKES_START') snakesGame = startSnakes(snakesGame, requesterId)
+  else snakesGame = rollSnakes(snakesGame, requesterId)
+  if (snakesGame === before) return
+  view = snakesGame.phase === 'lobby' ? 'snakes-lobby' : 'snakes-game'
   publishState()
   render()
-  if (enteredMission) window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function requestSnakesIntent(intent: SnakesIntent, demoRequesterId = localPeerId) {
+  if (!snakesGame) return
+  if (isDemo || isHost) applySnakesIntent(intent, demoRequesterId)
+  else void network?.sendIntent(intent).catch(() => showToast('Aksi gagal dikirim. Coba lagi.'))
+}
+
+function applyLudoIntent(intent: LudoIntent, requesterId: string) {
+  if (!ludoGame) return
+  const before = ludoGame
+  if (intent.type === 'LUDO_SET_COLOR') ludoGame = setLudoColor(ludoGame, requesterId, intent.color)
+  else if (intent.type === 'LUDO_START') ludoGame = startLudo(ludoGame, requesterId)
+  else if (intent.type === 'LUDO_ROLL') ludoGame = rollLudo(ludoGame, requesterId)
+  else ludoGame = moveLudoToken(ludoGame, requesterId, intent.tokenIndex)
+  if (ludoGame === before) return
+  view = ludoGame.phase === 'lobby' ? 'ludo-lobby' : 'ludo-game'
+  publishState()
+  render()
+}
+
+function requestLudoIntent(intent: LudoIntent, demoRequesterId = localPeerId) {
+  if (!ludoGame) return
+  if (isDemo || isHost) applyLudoIntent(intent, demoRequesterId)
+  else void network?.sendIntent(intent).catch(() => showToast('Aksi gagal dikirim. Coba lagi.'))
 }
 
 function applyIntent(intent: GameIntent, requesterId: string) {
@@ -1017,78 +1003,6 @@ function sendCurrentIntent(intent: GameIntent, demoRequesterId = game?.currentPl
   if (isDemo) applyIntent(intent, demoRequesterId)
   else if (isHost) applyIntent(intent, localPeerId)
   else void network?.sendIntent(intent).catch(() => showToast('Aksi gagal dikirim. Coba lagi.'))
-}
-
-function requestCoopIntent(intent: CoopIntent, demoRequesterId = localPeerId) {
-  if (!coopGame) return
-  if (isDemo || isHost) applyCoopIntent(intent, demoRequesterId)
-  else void network?.sendIntent(intent).catch(() => showToast('Aksi kru gagal dikirim. Coba lagi.'))
-}
-
-function requestCoopAction(action: CoopActionId) {
-  if (!coopGame) return
-  if (isDemo) {
-    const role = coopActions.find((item) => item.id === action)?.role
-    const operator = coopGame.players.find((player) => player.role === role)
-    if (operator) requestCoopIntent({type: 'COOP_ACTION', action}, operator.id)
-    return
-  }
-  requestCoopIntent({type: 'COOP_ACTION', action})
-}
-
-function startCoopClock() {
-  window.clearInterval(coopClock)
-  const update = () => {
-    if (!coopGame || coopGame.phase !== 'playing') return window.clearInterval(coopClock)
-    const now = Date.now()
-    document.querySelectorAll<HTMLElement>('[data-crisis-expires]').forEach((element) => {
-      const remaining = Math.max(0, Number(element.dataset.crisisExpires) - now)
-      element.textContent = `${Math.ceil(remaining / 1_000)} dtk`
-    })
-    const missionTime = document.querySelector<HTMLElement>('#mission-time')
-    if (missionTime && coopGame.startedAt !== null) missionTime.textContent = formatClock(Math.max(0, COOP_SESSION_MS - (now - coopGame.startedAt)))
-    if (!isHost) return
-    const next = tickCoop(coopGame, coopGame.hostId, now)
-    if (next === coopGame) return
-    coopGame = next
-    publishState()
-    renderCoopGame()
-  }
-  update()
-  coopClock = window.setInterval(update, 250)
-}
-
-function coopCrisisCard(crisis: CoopCrisis, role: CoopRole | null) {
-  const isSource = crisis.sourceRole === role
-  const isTarget = crisis.targetRole === role
-  const message = isSource
-    ? `<strong class="crisis-callout">${escapeHtml(crisis.callout)}</strong><p>${escapeHtml(crisis.prompt)}</p>`
-    : isTarget
-      ? `<p>Detail ada di panel ${coopRoleLabel[crisis.sourceRole]}. Dengarkan instruksi kru.</p>`
-      : `<p>${coopRoleLabel[crisis.sourceRole]} sedang membaca detail untuk ${coopRoleLabel[crisis.targetRole]}.</p>`
-  return `<article class="coop-crisis-card ${isSource ? 'is-source' : isTarget ? 'is-target' : ''}">
-    <div><span>${escapeHtml(crisis.title)}</span><time data-crisis-expires="${crisis.expiresAt}">-- dtk</time></div>
-    ${message}
-    <small>${coopRoleLabel[crisis.sourceRole]} memberi instruksi kepada ${coopRoleLabel[crisis.targetRole]}</small>
-  </article>`
-}
-
-function coopRoleDescription(role: CoopRole) {
-  return {
-    navigation: 'Baca radar, atur arah, dan kendalikan laju stasiun.',
-    engineering: 'Jaga daya, pendingin, dan tekanan reaktor.',
-    defense: 'Kendalikan perisai, sekat lambung, dan pemadam.',
-    comms: 'Kelola frekuensi, dekripsi, dan gangguan transmisi.',
-  }[role]
-}
-
-function coopSignalLabel(signal: CoopSignal) {
-  return {help: 'Butuh bantuan', 'check-panel': 'Cek panelmu', ready: 'Siap', repeat: 'Ulangi kode'}[signal]
-}
-
-function formatClock(milliseconds: number) {
-  const seconds = Math.ceil(milliseconds / 1_000)
-  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 function requestBid() {
@@ -1320,7 +1234,7 @@ function dieFace(value: number, side: string) {
 
 function publishState() {
   if (!isHost || isDemo) return
-  const state = activeGameId === 'panic-crew' ? coopGame : game
+  const state = activeGameId === 'ludo' ? ludoGame : activeGameId === 'snakes-ladders' ? snakesGame : game
   if (!state) return
   void network?.sendSnapshot(state).catch(() => showToast('Sinkronisasi tertunda.'))
 }
@@ -1328,12 +1242,15 @@ function publishState() {
 async function leaveToHome(message = '') {
   window.clearTimeout(joinTimer)
   window.clearInterval(auctionClock)
-  window.clearInterval(coopClock)
   await network?.leave().catch(() => undefined)
   isAnimatingPawn = false
+  lastAnimatedSnakesMoveSequence = -1
+  lastAnimatedLudoMoveSequence = -1
   network = null
   game = null
-  coopGame = null
+  arrowGame = null
+  snakesGame = null
+  ludoGame = null
   view = 'home'
   isHost = false
   isDemo = false
@@ -1345,7 +1262,8 @@ function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
     button.addEventListener('click', (event) => {
       event.preventDefault()
-      if (!isDemo && !window.confirm('Keluar dari room? Permainan ini tidak dapat dipulihkan.')) return
+      const message = view === 'arrow-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      if (!isDemo && !window.confirm(message)) return
       void leaveToHome()
     }),
   )
@@ -1706,26 +1624,10 @@ function openAsset(index: number) {
   dialog.showModal()
 }
 
-function initial(name: string) {
-  return escapeHtml(name.trim().charAt(0).toUpperCase() || '?')
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (character) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'})[character]!)
-}
-
 function showToast(message: string) {
   const toast = document.querySelector<HTMLDivElement>('#toast')!
   toast.textContent = message
   toast.classList.add('is-visible')
   window.clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 3500)
-}
-
-function logoMark() {
-  return `<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="13" height="13" rx="4"/><rect x="22" y="5" width="13" height="13" rx="4"/><rect x="5" y="22" width="13" height="13" rx="4"/><path d="M28.5 22v13M22 28.5h13"/></svg>`
-}
-
-function copyIcon() {
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>`
 }
