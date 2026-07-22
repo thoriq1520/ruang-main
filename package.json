@@ -7,13 +7,16 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "node --test \"src/**/*.test.ts\"",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "trystero": "^0.25.3"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.46.0",
     "typescript": "^5.9.3",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "wrangler": "^4.113.0"
   }
 }
