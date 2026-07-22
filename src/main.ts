@@ -1,5 +1,5 @@
 import './style.css'
-import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './cards'
+import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
   addPlayer,
   board,
@@ -31,17 +31,17 @@ import {
   useJailCard,
   type GameIntent,
   type GameState,
-} from './game'
-import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network'
-import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './site-content'
-import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './arrow-game'
-import {arrowGameScreen, drawArrowBoard} from './arrow-view'
-import {gameById, gameCard, gameCatalog, type GameId} from './game-catalog'
+} from './games/monopoly/game'
+import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network/network'
+import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './content/site-content'
+import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './games/arrow/arrow-game'
+import {arrowGameScreen} from './games/arrow/arrow-view'
+import {gameById, gameCard, gameCatalog, type GameId} from './games/game-catalog'
 import {copyIcon, escapeHtml, initial, logoMark} from './ui'
-import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakesIntent, type SnakesState} from './snakes-game'
-import {snakesGameScreen, snakesLobbyScreen} from './snakes-view'
-import {addLudoPlayer, createLudoDemo, createLudoLobby, isLudoState, ludoColors, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoState} from './ludo-game'
-import {ludoGameScreen, ludoLobbyScreen} from './ludo-view'
+import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
+import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
+import {addLudoPlayer, createLudoDemo, createLudoLobby, isLudoState, ludoColors, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoState} from './games/ludo/ludo-game'
+import {ludoGameScreen, ludoLobbyScreen} from './games/ludo/ludo-view'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let game: GameState | null = null
@@ -95,61 +95,39 @@ function renderHome() {
   app.innerHTML = `
     ${publicHeader()}
 
-    <main id="main-content" class="home-layout">
-      <section class="hero-panel" aria-labelledby="hero-title">
-        <p class="eyebrow">MINI GAME BROWSER</p>
-        <h1 id="hero-title">Main bareng.<br><span>Tanpa ribet.</span></h1>
-        <p class="hero-copy">Pilih permainan solo atau buat room bersama teman, langsung dari browser tanpa akun dan penyimpanan permanen.</p>
-        <div class="feature-row" aria-label="Fitur utama">
-          <span>Solo dan multipemain</span>
-          <span>Langsung di browser</span>
-          <span>Data sementara</span>
-        </div>
-        <div class="game-fan" aria-label="Koleksi Mini Games Coop">
-          ${gameCatalog.map((item, index) => gameCard(item, index, item.id === selectedGameId)).join('')}
+    <main id="main-content" class="home-stage">
+      <header class="home-intro">
+        <div><h1>Mau main apa?</h1><p>Empat game browser tanpa akun. Pilih satu, panggil teman, lalu mulai.</p></div>
+        <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Progres hanya hidup selama tab ini terbuka.</span></p>
+      </header>
+
+      <section class="game-library" aria-labelledby="library-title">
+        <div class="library-heading"><h2 id="library-title">Pilih game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
+        <div class="game-shelf" aria-label="Koleksi Mini Games Coop">
+          ${gameCatalog.map((item) => gameCard(item, item.id === selectedGameId)).join('')}
         </div>
       </section>
 
-      <section class="join-panel" id="selected-game" aria-labelledby="join-title">
-        <div>
-          <p class="step-label">Game terpilih / ${selectedGame.name}</p>
-          <h2 id="join-title">${isSolo ? 'Mulai puzzle' : 'Masuk ke meja'}</h2>
-          <p class="muted">${selectedGame.description}</p>
+      <section class="play-dock" id="selected-game" aria-labelledby="join-title">
+        <div class="play-summary">
+          <span class="play-number" aria-hidden="true">${String(gameCatalog.findIndex((item) => item.id === selectedGameId) + 1).padStart(2, '0')}</span>
+          <div><p>${isSolo ? 'Main sendiri' : 'Main bareng'}</p><h2 id="join-title">${selectedGame.name}</h2><p>${selectedGame.description}</p>${homeNotice ? `<p class="notice" role="alert">${escapeHtml(homeNotice)}</p>` : ''}</div>
         </div>
 
-        ${homeNotice ? `<p class="notice" role="alert">${escapeHtml(homeNotice)}</p>` : ''}
-
         ${isSolo ? `
-          <div class="solo-start">
-            <button class="button button-primary" type="button" id="start-solo">Mulai Arrow Puzzle</button>
-            <p>Level dimulai dari awal setiap kali halaman dimuat ulang.</p>
+          <div class="play-actions solo-start">
+            <button class="button button-primary" type="button" id="start-solo">Mulai bermain</button>
+            <p>Level kembali ke awal setelah halaman dimuat ulang.</p>
           </div>
-        ` : `<form id="room-form" novalidate>
-          <button class="button button-primary" type="button" id="create-room">Buat room ${selectedGame.name}</button>
-
-          <div class="divider"><span>atau gabung teman</span></div>
-
-          <div class="field">
-            <label for="room-code">Kode room</label>
-            <input id="room-code" name="room" class="code-input" maxlength="16" autocomplete="off" placeholder="ABCD2345" spellcheck="false" />
+        ` : `<form class="play-actions" id="room-form" novalidate>
+          <button class="button button-primary" type="button" id="create-room">Buat room</button>
+          <div class="quick-join">
+            <label for="room-code">Sudah punya kode?</label>
+            <div><input id="room-code" name="room" class="code-input" maxlength="16" autocomplete="off" placeholder="ABCD2345" spellcheck="false" /><button class="button button-secondary" type="submit" id="join-room">Gabung</button></div>
           </div>
-
-          <button class="button button-secondary" type="submit" id="join-room">Gabung room</button>
-          <button class="text-button" type="button" id="open-demo">Coba demo ${selectedGame.name}</button>
+          <button class="text-button" type="button" id="open-demo">Buka mode demo</button>
           <p id="form-error" class="form-error" role="alert"></p>
         </form>`}
-
-        <ol class="steps" aria-label="Cara bermain">
-          ${isSolo ? `
-            <li><span>1</span><p><strong>Baca arah</strong><small>Cari jalur yang tidak terhalang.</small></p></li>
-            <li><span>2</span><p><strong>Lepaskan panah</strong><small>Ketuk panah yang dapat keluar.</small></p></li>
-            <li><span>3</span><p><strong>Bersihkan papan</strong><small>Simpan tiga nyawa sampai akhir.</small></p></li>
-          ` : `
-            <li><span>1</span><p><strong>Buat kode</strong><small>Host membuat meja permainan.</small></p></li>
-            <li><span>2</span><p><strong>Undang teman</strong><small>Bagikan satu kode room.</small></p></li>
-            <li><span>3</span><p><strong>Main langsung</strong><small>Data bergerak antar-browser.</small></p></li>
-          `}
-        </ol>
       </section>
     </main>
 
@@ -163,7 +141,7 @@ function renderHome() {
         <p class="muted">Nama ini hanya tampil selama permainan.</p>
         <div class="field">
           <label for="player-name">Nama kamu</label>
-          <input id="player-name" name="name" maxlength="20" autocomplete="nickname" placeholder="Contoh: Raka" required />
+          <input id="player-name" name="name" maxlength="20" autocomplete="nickname" placeholder="Contoh: Thoriq" required />
           <p class="field-hint">Maksimal 20 karakter.</p>
           <p id="name-error" class="form-error" role="alert"></p>
         </div>
@@ -244,25 +222,46 @@ function renderArrowGame() {
   if (!arrowGame) return startArrowGame()
   updateDocumentMeta('Arrow Puzzle - Mini Games Coop', 'Game puzzle solo sementara yang dimainkan langsung dari browser.')
   app.innerHTML = arrowGameScreen(arrowGame)
-  drawArrowBoard(arrowGame)
   bindLeaveButtons()
 
-  document.querySelectorAll<HTMLButtonElement>('[data-arrow-id]').forEach((button) => button.addEventListener('click', () => {
-    const id = button.dataset.arrowId!
+  let arrowIsMoving = false
+  const activateArrow = (piece: SVGGElement) => {
+    const id = piece.dataset.arrowId!
+    if (arrowIsMoving) return
     if (!arrowGame) return
+    const boardElement = document.querySelector('.arrow-board')
     if (!isArrowFree(arrowGame, id)) {
-      arrowGame = releaseArrow(arrowGame, id)
-      renderArrowGame()
+      arrowIsMoving = true
+      piece.classList.add('is-blocked')
+      boardElement?.classList.add('is-busy', 'is-wrong')
+      document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((arrowPiece) => arrowPiece.setAttribute('aria-disabled', 'true'))
+      piece.querySelector<SVGAnimateTransformElement>('.arrow-blocked-motion')?.beginElement()
+      window.setTimeout(() => {
+        if (!arrowGame) return
+        arrowGame = releaseArrow(arrowGame, id)
+        renderArrowGame()
+      }, reducedMotion() ? 0 : 500)
       return
     }
-    button.classList.add('is-releasing')
-    document.querySelectorAll<HTMLButtonElement>('[data-arrow-id]').forEach((arrowButton) => (arrowButton.disabled = true))
+    arrowIsMoving = true
+    piece.classList.add('is-releasing')
+    boardElement?.classList.add('is-busy')
+    document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((arrowPiece) => arrowPiece.setAttribute('aria-disabled', 'true'))
+    piece.querySelectorAll<SVGAnimationElement>('.arrow-safe-motion').forEach((animation) => animation.beginElement())
     window.setTimeout(() => {
       if (!arrowGame) return
       arrowGame = releaseArrow(arrowGame, id)
       renderArrowGame()
-    }, reducedMotion() ? 0 : 220)
-  }))
+    }, reducedMotion() ? 0 : 500)
+  }
+  document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((piece) => {
+    piece.addEventListener('click', () => activateArrow(piece))
+    piece.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      activateArrow(piece)
+    })
+  })
   document.querySelector('#hint-arrow')?.addEventListener('click', () => {
     if (!arrowGame) return
     arrowGame = hintArrow(arrowGame)
@@ -307,24 +306,20 @@ function homeSupport() {
   return `<div class="public-shell home-support">
     <aside class="ad-slot" data-ad-placement="home-content" aria-label="Iklan"></aside>
 
-    <section class="support-intro" aria-labelledby="support-title">
-      <div>
-        <p class="step-label">Informasi situs</p>
-        <h2 id="support-title">Main dengan lebih yakin</h2>
-        <p>Pelajari cara kerja room, data sesi, aturan dasar, dan kanal bantuan sebelum mengundang teman.</p>
-      </div>
-      <div class="support-links">
-        <a href="#cara-bermain"><strong>Cara bermain</strong><span>Alur room dan aturan inti</span></a>
-        <a href="#tentang"><strong>Koleksi game</strong><span>Game yang tersedia dan prinsip produk</span></a>
-        <a href="#privasi"><strong>Privasi</strong><span>Data, WebRTC, cookie, dan iklan</span></a>
-        <a href="#kontak"><strong>Kontak</strong><span>Laporan bug dan permintaan privasi</span></a>
-      </div>
+    <section class="session-guide" aria-labelledby="support-title">
+      <header><h2 id="support-title">Tentang sesi ini</h2><p>Tidak ada akun dan progres permanen. Room multiplayer menghubungkan browser pemain secara langsung.</p></header>
+      <dl>
+        <div><dt>Masuk</dt><dd>Satu kode room</dd></div>
+        <div><dt>Koneksi</dt><dd>Peer to peer</dd></div>
+        <div><dt>Penyimpanan</dt><dd>Hanya di memori</dd></div>
+      </dl>
+      <nav class="session-links" aria-label="Informasi sesi"><a href="#cara-bermain">Cara bermain</a><a href="#privasi">Privasi</a><a href="#kontak">Laporkan masalah</a></nav>
     </section>
 
     <section class="faq-preview" aria-labelledby="faq-preview-title">
       <div class="section-copy">
-        <h2 id="faq-preview-title">Pertanyaan umum</h2>
-        <p>Jawaban cepat sebelum room dimulai.</p>
+        <h2 id="faq-preview-title">Sebelum masuk room</h2>
+        <p>Jawaban singkat untuk hal yang paling sering ditanyakan.</p>
       </div>
       <div class="faq-list">
         ${faqItems.slice(0, 4).map(faqItem).join('')}

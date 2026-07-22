@@ -449,7 +449,7 @@ export function rentForAsset(state: GameState, position: number, rollTotal = dic
 }
 
 export function createDemoGame(): GameState {
-  const state = ['Raka', 'Sari', 'Bima', 'Naya'].reduce((current, name, index) => index === 0 ? current : addPlayer(current, `demo-${index}`, name), createLobby('demo-0', 'Raka'))
+  const state = ['Thoriq', 'Sari', 'Bima', 'Naya'].reduce((current, name, index) => index === 0 ? current : addPlayer(current, `demo-${index}`, name), createLobby('demo-0', 'Thoriq'))
   const started = startGame(state, 'demo-0')
   return {...started, players: started.players.map((player) => player.id === 'demo-0' ? {...player, balance: 1_280_000, houses: 2} : player), assets: started.assets.map((asset) => asset.position === 1 || asset.position === 3 ? {...asset, ownerId: 'demo-0', houses: 1} : asset.position === 5 ? {...asset, ownerId: 'demo-1'} : asset), buildingSupply: {houses: 30, hotels: 12}}
 }

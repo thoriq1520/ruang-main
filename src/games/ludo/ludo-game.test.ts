@@ -3,14 +3,14 @@ import assert from 'node:assert/strict'
 import {addLudoPlayer, createLudoLobby, globalTrackIndex, moveLudoToken, rollLudo, setLudoColor, startLudo, type LudoState} from './ludo-game.ts'
 
 function readyGame() {
-  let state = addLudoPlayer(createLudoLobby('a', 'Raka'), 'b', 'Sari')
+  let state = addLudoPlayer(createLudoLobby('a', 'Thoriq'), 'b', 'Sari')
   state = setLudoColor(state, 'a', 'red')
   state = setLudoColor(state, 'b', 'blue')
   return startLudo(state, 'a')
 }
 
 test('warna harus unik dan semua pemain memilih warna sebelum mulai', () => {
-  let state = addLudoPlayer(createLudoLobby('a', 'Raka'), 'b', 'Sari')
+  let state = addLudoPlayer(createLudoLobby('a', 'Thoriq'), 'b', 'Sari')
   state = setLudoColor(state, 'a', 'red')
   assert.equal(setLudoColor(state, 'b', 'red'), state)
   assert.equal(startLudo(state, 'a'), state)

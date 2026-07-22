@@ -32,7 +32,7 @@ test('jalur pion mengikuti petak, melewati START, dan mendukung perpindahan lang
 })
 
 test('giliran, bonus START, dadu kembar, dan hukuman tiga kembar', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
 
   state = {
@@ -53,7 +53,7 @@ test('giliran, bonus START, dadu kembar, dan hukuman tiga kembar', () => {
 })
 
 test('aset dapat dibeli saat mendarat dan sewa berpindah ke pemilik', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {...state, players: state.players.map((player) => player.id === 'host' ? {...player, position: 39} : player)}
 
@@ -81,7 +81,7 @@ test('aset dapat dibeli saat mendarat dan sewa berpindah ke pemilik', () => {
 })
 
 test('kompleks lengkap membangun merata sampai hotel dan memperkuat sewa', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {...state, assets: state.assets.map((asset) => asset.position === 1 || asset.position === 3 ? {...asset, ownerId: 'host'} : asset)}
 
@@ -107,7 +107,7 @@ test('kompleks lengkap membangun merata sampai hotel dan memperkuat sewa', () =>
 })
 
 test('kartu biasa menahan giliran, menjalankan efek, lalu kembali ke bawah deck', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   assert.equal(state.chanceDeck.length, 16)
   assert.equal(state.communityDeck.length, 16)
   state = startGame(state, 'host')
@@ -130,7 +130,7 @@ test('kartu biasa menahan giliran, menjalankan efek, lalu kembali ke bawah deck'
 })
 
 test('kartu bebas penjara masuk inventory dan tidak kembali ke deck', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {
     ...state,
@@ -145,7 +145,7 @@ test('kartu bebas penjara masuk inventory dan tidak kembali ke deck', () => {
 })
 
 test('transfer ulang tahun mencatat penarik kartu sebagai kreditur jika lawan minus', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {
     ...state,
@@ -158,7 +158,7 @@ test('transfer ulang tahun mencatat penarik kartu sebagai kreditur jika lawan mi
 })
 
 test('mundur tiga petak dapat memicu kartu Dana Umum berikutnya', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {
     ...state,
@@ -174,7 +174,7 @@ test('mundur tiga petak dapat memicu kartu Dana Umum berikutnya', () => {
 })
 
 test('pajak, menuju penjara, tiga percobaan, dan kartu bebas penjara berjalan', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {...state, players: state.players.map((player) => player.id === 'host' ? {...player, position: 2} : player)}
   state = rollDice(state, 'host', [1, 1])
@@ -199,7 +199,7 @@ test('pajak, menuju penjara, tiga percobaan, dan kartu bebas penjara berjalan', 
 })
 
 test('aset yang dilewati masuk lelang dan penawar tertinggi menjadi pemilik', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {...state, players: state.players.map((player) => player.id === 'host' ? {...player, position: 39} : player)}
   state = rollDice(state, 'host', [1, 1])
@@ -216,7 +216,7 @@ test('aset yang dilewati masuk lelang dan penawar tertinggi menjadi pemilik', ()
 })
 
 test('bangunan dapat dijual, aset dapat dihipotek, dan sewa berhenti', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {...state, assets: state.assets.map((asset) => asset.position === 1 || asset.position === 3 ? {...asset, ownerId: 'host'} : asset)}
   state = buildAsset(state, 'host', 1)
@@ -229,7 +229,7 @@ test('bangunan dapat dijual, aset dapat dihipotek, dan sewa berhenti', () => {
 })
 
 test('trade memindahkan uang, properti, dan kartu bebas penjara secara atomik', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {
     ...state,
@@ -246,7 +246,7 @@ test('trade memindahkan uang, properti, dan kartu bebas penjara secara atomik', 
 })
 
 test('utang yang tak bisa dilikuidasi berakhir bangkrut dan menentukan pemenang', () => {
-  let state = addPlayer(createLobby('host', 'Raka'), 'peer', 'Sari')
+  let state = addPlayer(createLobby('host', 'Thoriq'), 'peer', 'Sari')
   state = startGame(state, 'host')
   state = {
     ...state,

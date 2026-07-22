@@ -52,7 +52,7 @@ export function createLudoLobby(hostId: string, hostName: string): LudoState {
 }
 
 export function createLudoDemo(): LudoState {
-  let state = createLudoLobby('demo-0', 'Raka')
+  let state = createLudoLobby('demo-0', 'Thoriq')
   state = addLudoPlayer(state, 'demo-1', 'Sari')
   state = addLudoPlayer(state, 'demo-2', 'Bima')
   state = setLudoColor(state, 'demo-0', 'red')

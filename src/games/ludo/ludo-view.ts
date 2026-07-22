@@ -1,5 +1,5 @@
 import {globalTrackIndex, ludoColorNames, ludoColors, ludoHomeCells, ludoTrackCells, type LudoColor, type LudoState} from './ludo-game'
-import {copyIcon, escapeHtml, initial, logoMark} from './ui'
+import {copyIcon, escapeHtml, initial, logoMark} from '../../ui'
 
 const baseTokenCells: Record<LudoColor, readonly (readonly [number, number])[]> = {
   red: [[1, 1], [1, 4], [4, 1], [4, 4]],

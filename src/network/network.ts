@@ -1,8 +1,8 @@
 import {joinRoom, selfId} from 'trystero'
 import type {DataPayload, JsonValue} from 'trystero'
-import type {GameIntent, GameState} from './game'
-import {isSnakesState, snakeMapIds, type SnakesIntent, type SnakesState} from './snakes-game.ts'
-import {isLudoState, ludoColors, type LudoIntent, type LudoState} from './ludo-game.ts'
+import type {GameIntent, GameState} from '../games/monopoly/game'
+import {isSnakesState, snakeMapIds, type SnakesIntent, type SnakesState} from '../games/snakes/snakes-game.ts'
+import {isLudoState, ludoColors, type LudoIntent, type LudoState} from '../games/ludo/ludo-game.ts'
 
 export type RoomGameId = 'monopoly' | 'snakes-ladders' | 'ludo'
 export type RoomIntent = GameIntent | SnakesIntent | LudoIntent

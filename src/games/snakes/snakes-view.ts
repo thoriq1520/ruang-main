@@ -1,5 +1,5 @@
 import {snakeMap, snakeMaps, type SnakeMap, type SnakesState} from './snakes-game'
-import {copyIcon, escapeHtml, initial, logoMark} from './ui'
+import {copyIcon, escapeHtml, initial, logoMark} from '../../ui'
 
 const playerClasses = ['pawn-0', 'pawn-1', 'pawn-2', 'pawn-3']
 

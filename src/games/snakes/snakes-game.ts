@@ -46,7 +46,7 @@ export function createSnakesLobby(hostId: string, hostName: string): SnakesState
 }
 
 export function createSnakesDemo(): SnakesState {
-  return startSnakes(addSnakesPlayer(addSnakesPlayer(createSnakesLobby('demo-0', 'Raka'), 'demo-1', 'Sari'), 'demo-2', 'Bima'), 'demo-0')
+  return startSnakes(addSnakesPlayer(addSnakesPlayer(createSnakesLobby('demo-0', 'Thoriq'), 'demo-1', 'Sari'), 'demo-2', 'Bima'), 'demo-0')
 }
 
 export function addSnakesPlayer(state: SnakesState, id: string, name: string): SnakesState {

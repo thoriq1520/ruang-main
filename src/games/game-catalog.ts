@@ -1,4 +1,4 @@
-import type {RoomGameId} from './network'
+import type {RoomGameId} from '../network/network'
 
 export type GameId = RoomGameId | 'arrow-puzzle'
 
@@ -50,17 +50,17 @@ export function gameById(id: GameId) {
   return gameCatalog.find((game) => game.id === id) ?? gameCatalog[0]
 }
 
-export function gameCard(item: GameCatalogItem, index: number, selected: boolean) {
+export function gameCard(item: GameCatalogItem, selected: boolean) {
   const visual = item.id === 'monopoly'
     ? '<span class="game-card-board" aria-hidden="true"><i></i><i></i><b>KR</b><i></i><i></i></span>'
     : item.id === 'snakes-ladders'
       ? '<span class="game-card-snakes" aria-hidden="true"><i></i><b>100</b><i></i></span>'
       : item.id === 'ludo'
         ? '<span class="game-card-ludo-board" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span>'
-        : '<span class="game-card-arrows" aria-hidden="true"><i>↑</i><i>→</i><i>↓</i><i>←</i></span>'
+        : '<span class="game-card-arrows" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M78 78H34V48H66V22H36"/><path d="m45 12-12 10 12 10"/></svg></span>'
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
-    <span class="game-card-top"><small>GAME ${String(index + 1).padStart(2, '0')}</small><i>${item.playerLabel}</i></span>
+    <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>
     ${visual}
     <strong>${item.name}</strong>
     <small>${item.genre}</small>
