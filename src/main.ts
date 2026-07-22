@@ -425,38 +425,53 @@ function renderCoopLobby() {
     <main id="main-content" class="coop-lobby-shell">
       <section class="coop-lobby-card" aria-labelledby="coop-lobby-title">
         <div class="coop-lobby-intro">
-          <p class="step-label">Ruang kendali</p>
-          <h1 id="coop-lobby-title">${state ? 'Susun kru' : 'Mencari host...'}</h1>
-          <p>Pilih satu panel. Semua kru harus memiliki peran berbeda dan menyatakan siap.</p>
-        </div>
-
-        <div class="room-code-card coop-room-code">
-          <div><span>Kode room</span><strong>${escapeHtml(activeRoomCode)}</strong></div>
-          <button class="icon-button" type="button" id="copy-code" aria-label="Salin kode room">${copyIcon()}</button>
+          <div>
+            <h1 id="coop-lobby-title">${state ? 'Ruang kru' : 'Menghubungkan...'}</h1>
+            <p>Ambil satu panel, lalu tunggu kru lain. Panel yang sudah dipilih akan terkunci.</p>
+          </div>
+          <div class="coop-room-code">
+            <span>Kode room</span>
+            <strong>${escapeHtml(activeRoomCode)}</strong>
+            <button class="icon-button" type="button" id="copy-code" aria-label="Salin kode room">${copyIcon()}</button>
+          </div>
         </div>
 
         ${state ? `
-          <div class="coop-roster" aria-label="Daftar kru">
-            ${players.map((player) => `
-              <article class="coop-crew-row ${player.ready ? 'is-ready' : ''}">
-                <span class="crew-initial">${initial(player.name)}</span>
-                <div><strong>${escapeHtml(player.name)}</strong><small>${player.role ? coopRoleLabel[player.role] : 'Belum memilih panel'}</small></div>
-                <span>${player.ready ? 'Siap' : 'Menunggu'}</span>
-              </article>
-            `).join('')}
-          </div>
+          <div class="coop-lobby-body">
+            <section class="coop-roster-panel" aria-labelledby="coop-roster-title">
+              <header>
+                <h2 id="coop-roster-title">Kru</h2>
+                <span>${players.length}/4 terisi</span>
+              </header>
+              <div class="coop-roster">
+                ${players.map((player) => `
+                  <article class="coop-crew-row ${player.ready ? 'is-ready' : ''}">
+                    <span class="crew-initial">${initial(player.name)}</span>
+                    <div><strong>${escapeHtml(player.name)}</strong><small>${player.role ? coopRoleLabel[player.role] : 'Belum memilih panel'}</small></div>
+                    <span>${player.ready ? 'Siap' : 'Menunggu'}</span>
+                  </article>
+                `).join('')}
+                ${Array.from({length: Math.max(0, 4 - players.length)}, (_, index) => `
+                  <div class="coop-empty-slot">
+                    <span>${String(players.length + index + 1).padStart(2, '0')}</span>
+                    <p><strong>Slot terbuka</strong><small>Menunggu pemain</small></p>
+                  </div>
+                `).join('')}
+              </div>
+            </section>
 
-          <div class="coop-role-picker">
-            <label for="coop-role">Panel kamu</label>
-            <select id="coop-role" ${localPlayer ? '' : 'disabled'}>
-              <option value="">Pilih peran</option>
-              ${coopRoles.map((role) => {
-                const occupied = players.some((player) => player.id !== localPeerId && player.role === role)
-                return `<option value="${role}" ${localPlayer?.role === role ? 'selected' : ''} ${occupied ? 'disabled' : ''}>${coopRoleLabel[role]}${occupied ? ' - dipakai' : ''}</option>`
-              }).join('')}
-            </select>
-            <p>${localPlayer?.role ? coopRoleDescription(localPlayer.role) : 'Setiap panel memiliki informasi dan tombol yang berbeda.'}</p>
-            <button class="button ${localPlayer?.ready ? 'button-secondary' : 'button-primary'}" type="button" id="coop-ready" ${localPlayer?.role ? '' : 'disabled'}>${localPlayer?.ready ? 'Batalkan siap' : 'Saya siap'}</button>
+            <div class="coop-role-picker">
+              <label for="coop-role">Panel kamu</label>
+              <select id="coop-role" ${localPlayer ? '' : 'disabled'}>
+                <option value="">Pilih peran</option>
+                ${coopRoles.map((role) => {
+                  const occupied = players.some((player) => player.id !== localPeerId && player.role === role)
+                  return `<option value="${role}" ${localPlayer?.role === role ? 'selected' : ''} ${occupied ? 'disabled' : ''}>${coopRoleLabel[role]}${occupied ? ' - dipakai' : ''}</option>`
+                }).join('')}
+              </select>
+              <p>${localPlayer?.role ? coopRoleDescription(localPlayer.role) : 'Setiap panel memiliki informasi dan tombol yang berbeda.'}</p>
+              <button class="button ${localPlayer?.ready ? 'button-secondary' : 'button-primary'}" type="button" id="coop-ready" ${localPlayer?.role ? '' : 'disabled'}>${localPlayer?.ready ? 'Batalkan siap' : 'Saya siap'}</button>
+            </div>
           </div>
 
           <div class="coop-lobby-actions">
