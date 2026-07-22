@@ -145,7 +145,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
     ],
     action: {
       label: 'Buka GitHub Issues',
-      href: 'https://github.com/thoriq1520/kota-raya/issues',
+      href: 'https://github.com/thoriq1520/ruang-main/issues',
       external: true,
     },
   },

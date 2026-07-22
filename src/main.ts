@@ -44,6 +44,7 @@ import {addLudoPlayer, createLudoDemo, createLudoLobby, isLudoState, ludoColors,
 import {ludoGameScreen, ludoLobbyScreen} from './games/ludo/ludo-view'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
+const siteUrl = 'https://ruangmain.web.id'
 let game: GameState | null = null
 let arrowGame: ArrowGameState | null = null
 let snakesGame: SnakesState | null = null
@@ -66,15 +67,18 @@ let lastAnimatedLudoMoveSequence = -1
 let auctionClock = 0
 let joinTimer = 0
 
+const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
+if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
+
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
-window.addEventListener('hashchange', () => {
+window.addEventListener('popstate', () => {
   if (!game && !arrowGame && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
   if (view === 'home') {
-    const publicPage = publicPageFromHash()
+    const publicPage = publicPageFromPath()
     if (publicPage) renderPublicPage(publicPage)
     else renderHome()
   }
@@ -279,8 +283,8 @@ function renderArrowGame() {
   })
 }
 
-function publicPageFromHash(): PublicPageSlug | null {
-  const slug = location.hash.slice(1) as PublicPageSlug
+function publicPageFromPath(): PublicPageSlug | null {
+  const slug = location.pathname.replace(/^\/+|\/+$/g, '') as PublicPageSlug
   return publicPageSlugs.includes(slug) ? slug : null
 }
 
@@ -291,14 +295,13 @@ function publicHeader(active?: PublicPageSlug) {
     ['faq', 'FAQ'],
   ]
   return `<header class="site-header public-header">
-    <a class="brand" href="#" aria-label="Mini Games Coop, halaman utama">
+    <a class="brand" href="/" aria-label="Mini Games Coop, halaman utama">
       ${logoMark()}
       <span>Mini Games Coop</span>
     </a>
     <nav class="public-nav" aria-label="Navigasi informasi">
-      ${links.map(([slug, label]) => `<a href="#${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
+      ${links.map(([slug, label]) => `<a href="/${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
     </nav>
-    <span class="status-chip"><span class="status-dot"></span> Data sementara</span>
   </header>`
 }
 
@@ -313,7 +316,7 @@ function homeSupport() {
         <div><dt>Koneksi</dt><dd>Peer to peer</dd></div>
         <div><dt>Penyimpanan</dt><dd>Hanya di memori</dd></div>
       </dl>
-      <nav class="session-links" aria-label="Informasi sesi"><a href="#cara-bermain">Cara bermain</a><a href="#privasi">Privasi</a><a href="#kontak">Laporkan masalah</a></nav>
+      <nav class="session-links" aria-label="Informasi sesi"><a href="/cara-bermain">Cara bermain</a><a href="/privasi">Privasi</a><a href="/kontak">Laporkan masalah</a></nav>
     </section>
 
     <section class="faq-preview" aria-labelledby="faq-preview-title">
@@ -324,18 +327,18 @@ function homeSupport() {
       <div class="faq-list">
         ${faqItems.slice(0, 4).map(faqItem).join('')}
       </div>
-      <a class="inline-link" href="#faq">Lihat semua FAQ</a>
+      <a class="inline-link" href="/faq">Lihat semua FAQ</a>
     </section>
   </div>`
 }
 
 function renderPublicPage(slug: PublicPageSlug) {
   const page = publicPages[slug]
-  updateDocumentMeta(page.title, page.description)
+  updateDocumentMeta(`${page.title} - Mini Games Coop`, page.description, `/${slug}`)
   app.innerHTML = `
     ${publicHeader(slug)}
     <main id="main-content" class="public-page public-shell">
-      <a class="back-link" href="#">Kembali ke permainan</a>
+      <a class="back-link" href="/">Kembali ke permainan</a>
       <header class="public-page-intro">
         <p class="step-label">Mini Games Coop</p>
         <h1>${escapeHtml(page.title)}</h1>
@@ -378,24 +381,31 @@ function faqItem(item: (typeof faqItems)[number]) {
 function publicFooter() {
   return `<footer class="site-footer">
     <div>
-      <a class="brand" href="#">${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="/">${logoMark()}<span>Mini Games Coop</span></a>
       <p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p>
     </div>
     <nav aria-label="Navigasi footer">
-      <a href="#tentang">Tentang</a>
-      <a href="#cara-bermain">Cara bermain</a>
-      <a href="#faq">FAQ</a>
-      <a href="#kontak">Kontak</a>
-      <a href="#privasi">Privasi</a>
-      <a href="#ketentuan">Ketentuan</a>
+      <a href="/tentang">Tentang</a>
+      <a href="/cara-bermain">Cara bermain</a>
+      <a href="/faq">FAQ</a>
+      <a href="/kontak">Kontak</a>
+      <a href="/privasi">Privasi</a>
+      <a href="/ketentuan">Ketentuan</a>
     </nav>
     <p class="footer-note">© ${new Date().getFullYear()} Mini Games Coop. Dibuat untuk hiburan bersama.</p>
   </footer>`
 }
 
-function updateDocumentMeta(title = 'Mini Games Coop - Main Langsung dari Browser', description = 'Koleksi mini game solo dan P2P sementara tanpa akun dan database.') {
+function updateDocumentMeta(title = 'Mini Games Coop - Main Langsung dari Browser', description = 'Koleksi mini game solo dan P2P sementara tanpa akun dan database.', path = '/') {
+  const canonicalUrl = new URL(path, siteUrl).href
   document.title = title
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description)
+  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
+  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title)
+  document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description)
+  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title)
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description)
 }
 
 function renderLobby() {

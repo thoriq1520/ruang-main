@@ -34,6 +34,6 @@ test('halaman privasi menjelaskan teknologi pihak ketiga dan iklan', () => {
 
 test('halaman kontak menyediakan kanal publik nyata', () => {
   const contact = publicPages.kontak
-  assert.equal(contact.action?.href, 'https://github.com/thoriq1520/kota-raya/issues')
+  assert.equal(contact.action?.href, 'https://github.com/thoriq1520/ruang-main/issues')
   assert.equal(contact.action?.external, true)
 })
