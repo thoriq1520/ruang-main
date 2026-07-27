@@ -1,0 +1,113 @@
+import {updateDocumentMeta} from '../../app/seo'
+import type {GameController} from '../../shared/game-controller'
+import {FRUIT_BOARD_WIDTH, FruitMergeGame, fruitSpecs} from './fruit-game'
+import {drawFruitBoard, drawFruitPreview, fruitGameScreen} from './fruit-view'
+
+export function createFruitController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
+  let game: FruitMergeGame | null = null
+  let stopLoop: (() => void) | null = null
+
+  const stop = () => {
+    stopLoop?.()
+    stopLoop = null
+  }
+
+  const render = () => {
+    if (!game) return start()
+    stop()
+    updateDocumentMeta('Main Fruit Merge Gratis | Ruang Main', 'Main Fruit Merge gratis langsung dari browser tanpa akun. Gabungkan buah sejenis dan jaga tumpukan tetap di dalam wadah.', '/game/fruit-merge')
+    root.innerHTML = fruitGameScreen(game)
+    bindLeaveButtons()
+
+    const canvas = root.querySelector<HTMLCanvasElement>('#fruit-canvas')!
+    const context = canvas.getContext('2d')!
+    const preview = root.querySelector<HTMLCanvasElement>('#fruit-preview')!
+    const previewContext = preview.getContext('2d')!
+    const score = root.querySelector<HTMLElement>('#fruit-score')!
+    const largest = root.querySelector<HTMLElement>('#fruit-largest')!
+    const dropButton = root.querySelector<HTMLButtonElement>('#drop-fruit')!
+    const result = root.querySelector<HTMLElement>('#fruit-result')!
+    const finalScore = root.querySelector<HTMLElement>('#fruit-final-score')!
+    const boardWrap = root.querySelector<HTMLElement>('.fruit-board-wrap')!
+    let previousTime = performance.now()
+    let frame = 0
+    let lastScore = -1
+    let lastLargest = -1
+    let lastStatus = ''
+
+    const dropCurrentFruit = () => {
+      game?.drop()
+      canvas.focus({preventScroll: true})
+    }
+    const setAimFromPointer = (clientX: number) => {
+      if (!game) return
+      const rectangle = canvas.getBoundingClientRect()
+      game.setAim((clientX - rectangle.left) / rectangle.width * FRUIT_BOARD_WIDTH)
+    }
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (event.pointerType === 'mouse') setAimFromPointer(event.clientX)
+    })
+    canvas.addEventListener('pointerdown', (event) => {
+      setAimFromPointer(event.clientX)
+      dropCurrentFruit()
+    })
+    canvas.addEventListener('keydown', (event) => {
+      if (!game) return
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault()
+        game.setAim(game.aimX + (event.key === 'ArrowLeft' ? -24 : 24))
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        dropCurrentFruit()
+      }
+    })
+    dropButton.addEventListener('click', dropCurrentFruit)
+    root.querySelectorAll('[data-restart-fruit]').forEach((button) => button.addEventListener('click', () => {
+      game = new FruitMergeGame()
+      render()
+    }))
+
+    const animate = (time: number) => {
+      if (!game) return
+      game.update((time - previousTime) / 1000)
+      previousTime = time
+      drawFruitBoard(context, game)
+      drawFruitPreview(previewContext, game.nextKinds)
+      if (game.score !== lastScore) {
+        score.textContent = String(game.score)
+        finalScore.textContent = String(game.score)
+        lastScore = game.score
+      }
+      if (game.largestKind !== lastLargest) {
+        largest.textContent = fruitSpecs[game.largestKind].name
+        lastLargest = game.largestKind
+      }
+      if (game.status !== lastStatus) {
+        result.hidden = game.status !== 'over'
+        lastStatus = game.status
+      }
+      dropButton.disabled = game.status !== 'playing' || game.dropCooldown > 0
+      boardWrap.classList.toggle('is-danger', game.dangerProgress > .35)
+      frame = requestAnimationFrame(animate)
+    }
+    frame = requestAnimationFrame(animate)
+    stopLoop = () => cancelAnimationFrame(frame)
+  }
+
+  const start = () => {
+    stop()
+    game = new FruitMergeGame()
+    render()
+  }
+
+  return {
+    get active() { return game !== null },
+    start,
+    render,
+    reset() {
+      stop()
+      game = null
+    },
+  }
+}

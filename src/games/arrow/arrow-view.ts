@@ -1,5 +1,5 @@
 import {arrowTravel, type ArrowDirection, type ArrowGameState, type ArrowPiece} from './arrow-game'
-import {logoMark} from '../../ui'
+import {gameHeader} from '../../shared/ui'
 
 const directionLabel: Record<ArrowDirection, string> = {
   up: 'atas',
@@ -64,27 +64,27 @@ export function arrowGameScreen(state: ArrowGameState) {
       : ''
 
   return `
-    <header class="site-header compact-header arrow-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <span class="game-id">Arrow Puzzle</span>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Arrow Puzzle', className: 'arrow-header'})}
     <main id="main-content" class="arrow-shell">
       <section class="arrow-game-panel" aria-labelledby="arrow-title">
         <div class="arrow-game-copy">
-          <p class="eyebrow">PUZZLE SOLO</p>
-          <h1 id="arrow-title">Urai jalurnya.</h1>
-          <p>Ketuk garis yang kepala panahnya punya jalan kosong hingga tepi. Garis yang salah akan menabrak dan mengurangi nyawa.</p>
+          <p class="arrow-game-label">Arrow Puzzle</p>
+          <h1 id="arrow-title">Level ${state.level}</h1>
+          <p class="arrow-objective">Pilih panah dengan jalur kosong menuju tepi.</p>
           <dl class="arrow-stats">
-            <div><dt>Level</dt><dd>${state.level}</dd></div>
             <div><dt>Tersisa</dt><dd>${remaining}</dd></div>
-            <div><dt>Nyawa</dt><dd>${state.lives} / ${state.maxLives}</dd></div>
+            <div><dt>Nyawa</dt><dd>${state.lives}/${state.maxLives}</dd></div>
+            <div><dt>Langkah</dt><dd>${state.moves}</dd></div>
           </dl>
           <div class="arrow-actions">
             <button class="button button-primary" id="hint-arrow" type="button" ${state.status === 'playing' ? '' : 'disabled'}>Petunjuk</button>
-            <button class="button button-secondary" data-restart-arrow type="button">Ulang level</button>
+            <button class="button button-secondary" data-restart-arrow type="button">Mulai ulang</button>
           </div>
-          <p class="arrow-session-note">Progres hanya berlaku selama tab ini terbuka.</p>
+          <div class="arrow-rule">
+            <strong>Cara bermain</strong>
+            <p>Ketuk kepala panah. Jika terhalang, panah memantul dan satu nyawa berkurang.</p>
+          </div>
+          <p class="arrow-session-note">Sesi tidak disimpan.</p>
         </div>
         <div class="arrow-board-wrap">
           <div class="arrow-board" style="--arrow-grid-size:${state.size}" role="group" aria-label="Papan Arrow Puzzle level ${state.level}">

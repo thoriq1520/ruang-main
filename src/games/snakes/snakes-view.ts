@@ -1,16 +1,12 @@
 import {snakeMap, snakeMaps, type SnakeMap, type SnakesState} from './snakes-game'
-import {copyIcon, dieView, escapeHtml, initial, logoMark} from '../../ui'
+import {copyIcon, dieView, escapeHtml, gameHeader, initial} from '../../shared/ui'
 
 const playerClasses = ['pawn-0', 'pawn-1', 'pawn-2', 'pawn-3']
 
 export function snakesLobbyScreen(state: SnakesState | null, roomCode: string, host: boolean, localPeerId: string) {
   const players = state?.players ?? []
   return `
-    <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <span class="game-id">Ular Tangga</span>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Ular Tangga', className: 'snakes-header'})}
     <main id="main-content" class="snakes-lobby-shell">
       <section class="snakes-lobby-card">
         <div class="snakes-lobby-heading">
@@ -36,14 +32,10 @@ export function snakesGameScreen(state: SnakesState, roomCode: string, canRoll: 
   const current = state.players.find((player) => player.id === state.currentPlayerId)
   const winner = state.players.find((player) => player.id === state.winnerId)
   return `
-    <header class="game-header snakes-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <div class="game-meta"><span class="live-badge"><span class="status-dot"></span>${demo ? 'Mode demo' : 'Room aktif'}</span><span class="room-mini">${escapeHtml(roomCode)}</span></div>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Ular Tangga', compact: false, roomCode, status: demo ? 'Mode demo' : 'Room aktif', className: 'snakes-header'})}
     <main id="main-content" class="snakes-game-shell theme-${map.id}">
       <aside class="snakes-side-panel">
-        <div><p class="eyebrow">ULAR TANGGA</p><h1>${escapeHtml(map.name)}</h1><p>${escapeHtml(map.tagline)}</p></div>
+        <div><p class="game-panel-label">Ular Tangga</p><h1>${escapeHtml(map.name)}</h1><p>${escapeHtml(map.tagline)}</p></div>
         <div class="snakes-turn-card"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="single-die dice-row" role="status" aria-live="polite">${dieView(state.lastRoll, 0, animateDice)}</div><button class="button button-primary" id="roll-snakes" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : 'Menunggu giliran'}</button></div>
         <div class="snakes-player-list">${state.players.map((player, index) => `<div class="${player.id === state.currentPlayerId ? 'is-current' : ''}"><span class="snake-player-dot ${playerClasses[index]}">${initial(player.name)}</span><p><strong>${escapeHtml(player.name)}</strong><small>Petak ${player.position}</small></p></div>`).join('')}</div>
         <ol class="snakes-log">${state.log.slice(-4).reverse().map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}</ol>

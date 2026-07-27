@@ -1,4 +1,6 @@
 import './style.css'
+import './app/home.css'
+import './games/fruit/fruit.css'
 import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
   addPlayer,
@@ -11,8 +13,6 @@ import {
   createLobby,
   declareBankruptcy,
   formatRupiah,
-  JAIL_FINE,
-  minimumAuctionBid,
   mortgageAsset,
   movementPath,
   ownsCompleteGroup,
@@ -33,20 +33,22 @@ import {
   type GameState,
 } from './games/monopoly/game'
 import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network/network'
-import {faqItems, publicPages, publicPageSlugs, siteMeta, type PublicPageSlug} from './content/site-content'
-import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './games/arrow/arrow-game'
-import {arrowGameScreen} from './games/arrow/arrow-view'
-import {gameById, gameCard, gameCatalog, type GameCatalogItem, type GameId} from './games/game-catalog'
-import {copyIcon, dieView, escapeHtml, initial, logoMark, requestAdSafely} from './ui'
+import {publicPageSlugs, type PublicPageSlug} from './content/site-content'
+import {gameById, gameCatalog, type GameId} from './games/game-catalog'
+import {copyIcon, dieView, escapeHtml, gameHeader, initial, requestAdSafely} from './shared/ui'
 import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakeMove, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
 import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
 import {addLudoPlayer, createLudoDemo, createLudoLobby, globalTrackIndex, isLudoState, ludoColors, ludoHomeCells, ludoTrackCells, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoMove, type LudoState} from './games/ludo/ludo-game'
 import {ludoGameScreen, ludoLobbyScreen} from './games/ludo/ludo-view'
+import {gamePageFromPath, publicPageFromPath, renderGameLandingPage, renderPublicPage} from './app/public-pages'
+import {updateDocumentMeta} from './app/seo'
+import {createArrowController} from './games/arrow/arrow-controller'
+import {createFruitController} from './games/fruit/fruit-controller'
+import {homeScreen} from './app/home-view'
+import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
-const siteUrl = 'https://ruangmain.web.id'
 let game: GameState | null = null
-let arrowGame: ArrowGameState | null = null
 let snakesGame: SnakesState | null = null
 let ludoGame: LudoState | null = null
 let network: NetworkSession | null = null
@@ -57,7 +59,7 @@ let isDemo = false
 const requestedGameId = new URLSearchParams(location.search).get('game')
 let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
@@ -68,6 +70,8 @@ let lastAnimatedSnakesRollSequence = -1
 let lastAnimatedLudoRollSequence = -1
 let auctionClock = 0
 let joinTimer = 0
+const arrowController = createArrowController(app, bindLeaveButtons)
+const fruitController = createFruitController(app, bindLeaveButtons)
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
 if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
@@ -75,22 +79,23 @@ if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.repl
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
 window.addEventListener('popstate', () => {
-  if (!game && !arrowGame && !snakesGame && !ludoGame && view === 'home') render()
+  if (!game && !arrowController.active && !fruitController.active && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
   if (view === 'home') {
     const publicPage = publicPageFromPath()
-    if (publicPage) renderPublicPage(publicPage)
+    if (publicPage) renderPublicPage(app, publicPage)
     else {
       const gamePage = gamePageFromPath()
-      if (gamePage) renderGameLandingPage(gamePage)
+      if (gamePage) renderGameLandingPage(app, gamePage)
       else renderHome()
     }
   }
   else if (view === 'lobby') renderLobby()
   else if (view === 'game') renderGame()
-  else if (view === 'arrow-game') renderArrowGame()
+  else if (view === 'arrow-game') arrowController.render()
+  else if (view === 'fruit-game') fruitController.render()
   else if (view === 'snakes-lobby') renderSnakesLobby()
   else if (view === 'snakes-game') renderSnakesGame()
   else if (view === 'ludo-lobby') renderLudoLobby()
@@ -100,68 +105,8 @@ function render() {
 function renderHome() {
   lastAnimatedRollSequence = -1
   updateDocumentMeta()
-  const selectedGame = gameById(selectedGameId)
-  const isSolo = selectedGame.mode === 'solo'
-  app.innerHTML = `
-    ${publicHeader()}
-
-    <main id="main-content" class="home-stage">
-      <header class="home-intro">
-        <div><h1>Mau main apa?</h1><p>Ruang Main punya empat game browser tanpa akun. Pilih satu, panggil teman, lalu mulai.</p></div>
-        <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Progres hanya hidup selama tab ini terbuka.</span></p>
-      </header>
-
-      <section class="game-library" aria-labelledby="library-title">
-        <div class="library-heading"><h2 id="library-title">Pilih game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
-        <div class="game-shelf" aria-label="Koleksi game Ruang Main">
-          ${gameCatalog.map((item) => gameCard(item, item.id === selectedGameId)).join('')}
-        </div>
-      </section>
-
-      <section class="play-dock" id="selected-game" aria-labelledby="join-title">
-        <div class="play-summary">
-          <span class="play-number" aria-hidden="true">${String(gameCatalog.findIndex((item) => item.id === selectedGameId) + 1).padStart(2, '0')}</span>
-          <div><p>${isSolo ? 'Main sendiri' : 'Main bareng'}</p><h2 id="join-title">${selectedGame.name}</h2><p>${selectedGame.description}</p>${homeNotice ? `<p class="notice" role="alert">${escapeHtml(homeNotice)}</p>` : ''}</div>
-        </div>
-
-        ${isSolo ? `
-          <div class="play-actions solo-start">
-            <button class="button button-primary" type="button" id="start-solo">Mulai bermain</button>
-            <p>Level kembali ke awal setelah halaman dimuat ulang.</p>
-          </div>
-        ` : `<form class="play-actions" id="room-form" novalidate>
-          <button class="button button-primary" type="button" id="create-room">Buat room</button>
-          <div class="quick-join">
-            <label for="room-code">Sudah punya kode?</label>
-            <div><input id="room-code" name="room" class="code-input" maxlength="16" autocomplete="off" placeholder="ABCD2345" spellcheck="false" /><button class="button button-secondary" type="submit" id="join-room">Gabung</button></div>
-          </div>
-          <button class="text-button" type="button" id="open-demo">Buka mode demo</button>
-          <p id="form-error" class="form-error" role="alert"></p>
-        </form>`}
-      </section>
-    </main>
-
-    ${homeSupport()}
-    ${publicFooter()}
-
-    ${isSolo ? '' : `<dialog class="asset-dialog name-dialog" id="name-dialog" aria-labelledby="name-dialog-title">
-      <form id="name-form" novalidate>
-        <p class="step-label" id="name-dialog-mode">Buat room baru</p>
-        <h2 id="name-dialog-title">Nama pemain</h2>
-        <p class="muted">Nama ini hanya tampil selama permainan.</p>
-        <div class="field">
-          <label for="player-name">Nama kamu</label>
-          <input id="player-name" name="name" maxlength="20" autocomplete="nickname" placeholder="Contoh: Thoriq" required />
-          <p class="field-hint">Maksimal 20 karakter.</p>
-          <p id="name-error" class="form-error" role="alert"></p>
-        </div>
-        <div class="name-dialog-actions">
-          <button class="button button-secondary" type="button" id="cancel-name">Batal</button>
-          <button class="button button-primary" type="submit" id="confirm-name">Buat room</button>
-        </div>
-      </form>
-    </dialog>`}
-  `
+  const {html, selectedGame, isSolo} = homeScreen(selectedGameId, homeNotice)
+  app.innerHTML = html
 
   requestHomeAd()
 
@@ -172,7 +117,7 @@ function renderHome() {
   }))
 
   if (isSolo) {
-    document.querySelector('#start-solo')?.addEventListener('click', startArrowGame)
+    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : startArrowGame)
     return
   }
 
@@ -219,260 +164,38 @@ function renderHome() {
 }
 
 function startArrowGame() {
-  arrowGame = createArrowGame()
+  fruitController.reset()
   game = null
   snakesGame = null
   ludoGame = null
   network = null
   homeNotice = ''
   view = 'arrow-game'
-  render()
+  arrowController.start()
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
-function renderArrowGame() {
-  if (!arrowGame) return startArrowGame()
-  updateDocumentMeta('Main Arrow Puzzle Gratis | Ruang Main', 'Main Arrow Puzzle gratis langsung dari browser tanpa akun. Progres hanya tersimpan selama tab terbuka.', '/game/arrow-puzzle')
-  app.innerHTML = arrowGameScreen(arrowGame)
-  bindLeaveButtons()
-
-  let arrowIsMoving = false
-  const activateArrow = (piece: SVGGElement) => {
-    const id = piece.dataset.arrowId!
-    if (arrowIsMoving) return
-    if (!arrowGame) return
-    const boardElement = document.querySelector('.arrow-board')
-    if (!isArrowFree(arrowGame, id)) {
-      arrowIsMoving = true
-      piece.classList.add('is-blocked')
-      boardElement?.classList.add('is-busy', 'is-wrong')
-      document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((arrowPiece) => arrowPiece.setAttribute('aria-disabled', 'true'))
-      piece.querySelector<SVGAnimateTransformElement>('.arrow-blocked-motion')?.beginElement()
-      window.setTimeout(() => {
-        if (!arrowGame) return
-        arrowGame = releaseArrow(arrowGame, id)
-        renderArrowGame()
-      }, reducedMotion() ? 0 : 500)
-      return
-    }
-    arrowIsMoving = true
-    piece.classList.add('is-releasing')
-    boardElement?.classList.add('is-busy')
-    document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((arrowPiece) => arrowPiece.setAttribute('aria-disabled', 'true'))
-    piece.querySelectorAll<SVGAnimationElement>('.arrow-safe-motion').forEach((animation) => animation.beginElement())
-    window.setTimeout(() => {
-      if (!arrowGame) return
-      arrowGame = releaseArrow(arrowGame, id)
-      renderArrowGame()
-    }, reducedMotion() ? 0 : 500)
-  }
-  document.querySelectorAll<SVGGElement>('[data-arrow-id]').forEach((piece) => {
-    piece.addEventListener('click', () => activateArrow(piece))
-    piece.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return
-      event.preventDefault()
-      activateArrow(piece)
-    })
-  })
-  document.querySelector('#hint-arrow')?.addEventListener('click', () => {
-    if (!arrowGame) return
-    arrowGame = hintArrow(arrowGame)
-    renderArrowGame()
-  })
-  document.querySelectorAll('[data-restart-arrow]').forEach((button) => button.addEventListener('click', () => {
-    if (!arrowGame) return
-    arrowGame = createArrowGame(arrowGame.level)
-    renderArrowGame()
-  }))
-  document.querySelector('#next-arrow-level')?.addEventListener('click', () => {
-    if (!arrowGame) return
-    arrowGame = createArrowGame(arrowGame.level + 1)
-    renderArrowGame()
-  })
-}
-
-function publicPageFromPath(): PublicPageSlug | null {
-  const slug = location.pathname.replace(/^\/+|\/+$/g, '') as PublicPageSlug
-  return publicPageSlugs.includes(slug) ? slug : null
-}
-
-function gamePageFromPath(): GameCatalogItem | null {
-  const match = location.pathname.match(/^\/game\/([^/]+)\/?$/)
-  return match ? gameCatalog.find((item) => item.slug === match[1]) ?? null : null
-}
-
-function publicHeader(active?: PublicPageSlug) {
-  const links: Array<[PublicPageSlug, string]> = [
-    ['tentang', 'Game'],
-    ['cara-bermain', 'Cara bermain'],
-    ['faq', 'FAQ'],
-  ]
-  return `<header class="site-header public-header">
-    <a class="brand" href="/" aria-label="Ruang Main, halaman utama">
-      ${logoMark()}
-      <span>Ruang Main</span>
-    </a>
-    <nav class="public-nav" aria-label="Navigasi informasi">
-      ${links.map(([slug, label]) => `<a href="/${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
-    </nav>
-  </header>`
-}
-
-function homeSupport() {
-  return `<div class="public-shell home-support">
-    <aside class="ad-slot" data-ad-placement="home-content" aria-label="Iklan">
-      <ins class="adsbygoogle"
-        style="display:block"
-        data-ad-client="ca-pub-4066128992268171"
-        data-ad-slot="4940905838"
-        data-ad-format="auto"
-        data-full-width-responsive="true"></ins>
-    </aside>
-
-    <section class="session-guide" aria-labelledby="support-title">
-      <header><h2 id="support-title">Tentang sesi ini</h2><p>Tidak ada akun dan progres permanen. Room multiplayer menghubungkan browser pemain secara langsung.</p></header>
-      <dl>
-        <div><dt>Masuk</dt><dd>Satu kode room</dd></div>
-        <div><dt>Koneksi</dt><dd>Peer to peer</dd></div>
-        <div><dt>Penyimpanan</dt><dd>Hanya di memori</dd></div>
-      </dl>
-      <nav class="game-guide-links" aria-label="Panduan setiap game">
-        <span>Panduan game</span>
-        ${gameCatalog.map((item) => `<a href="/game/${item.slug}">${escapeHtml(item.name)}</a>`).join('')}
-      </nav>
-      <nav class="session-links" aria-label="Informasi sesi"><a href="/cara-bermain">Cara bermain</a><a href="/privasi">Privasi</a><a href="/kontak">Laporkan masalah</a></nav>
-    </section>
-
-    <section class="faq-preview" aria-labelledby="faq-preview-title">
-      <div class="section-copy">
-        <h2 id="faq-preview-title">Sebelum masuk room</h2>
-        <p>Jawaban singkat untuk hal yang paling sering ditanyakan.</p>
-      </div>
-      <div class="faq-list">
-        ${faqItems.slice(0, 4).map(faqItem).join('')}
-      </div>
-      <a class="inline-link" href="/faq">Lihat semua FAQ</a>
-    </section>
-  </div>`
+function startFruitGame() {
+  arrowController.reset()
+  game = null
+  snakesGame = null
+  ludoGame = null
+  network = null
+  homeNotice = ''
+  view = 'fruit-game'
+  fruitController.start()
+  window.scrollTo({top: 0, behavior: 'auto'})
 }
 
 function requestHomeAd() {
   requestAdSafely(window)
 }
 
-function renderPublicPage(slug: PublicPageSlug) {
-  const page = publicPages[slug]
-  updateDocumentMeta(`${page.title} | Ruang Main`, page.description, `/${slug}`)
-  app.innerHTML = `
-    ${publicHeader(slug)}
-    <main id="main-content" class="public-page public-shell">
-      <a class="back-link" href="/">Kembali ke permainan</a>
-      <header class="public-page-intro">
-        <p class="step-label">Ruang Main</p>
-        <h1>${escapeHtml(page.title)}</h1>
-        <p>${escapeHtml(page.description)}</p>
-      </header>
-
-      <aside class="ad-slot" data-ad-placement="information-content" aria-label="Iklan"></aside>
-
-      ${slug === 'faq'
-        ? `<section class="public-content-section" aria-labelledby="all-faq-title">
-            <h2 id="all-faq-title">Jawaban yang sering dicari</h2>
-            <div class="faq-list">${faqItems.map(faqItem).join('')}</div>
-          </section>`
-        : page.sections.map(publicSection).join('')}
-
-      ${page.action
-        ? `<div class="public-action"><a class="button button-primary" href="${escapeHtml(page.action.href)}" ${page.action.external ? 'target="_blank" rel="noreferrer"' : ''}>${escapeHtml(page.action.label)}</a></div>`
-        : ''}
-    </main>
-    ${publicFooter()}
-  `
-  window.scrollTo({top: 0, behavior: reducedMotion() ? 'auto' : 'smooth'})
-}
-
-function renderGameLandingPage(item: GameCatalogItem) {
-  updateDocumentMeta(item.seoTitle, item.seoDescription, `/game/${item.slug}`)
-  app.innerHTML = `
-    ${publicHeader()}
-    <main id="main-content" class="public-page game-landing public-shell">
-      <a class="back-link" href="/">Kembali ke semua game</a>
-      <header class="public-page-intro">
-        <p class="step-label">${escapeHtml(item.genre)} · ${escapeHtml(item.playerLabel)} pemain</p>
-        <h1>${escapeHtml(item.name)}</h1>
-        <p>${escapeHtml(item.seoDescription)}</p>
-        <a class="button button-primary game-landing-cta" href="/?game=${item.id}#selected-game">${item.mode === 'solo' ? 'Main sekarang' : 'Buat atau gabung room'}</a>
-      </header>
-
-      ${item.guide.map((section) => `<section class="public-content-section">
-        <h2>${escapeHtml(section.heading)}</h2>
-        ${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
-        <ul>${section.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>
-      </section>`).join('')}
-
-      <nav class="related-games" aria-label="Game lain di Ruang Main">
-        <strong>Game lain</strong>
-        ${gameCatalog.filter((gameItem) => gameItem.id !== item.id).map((gameItem) => `<a href="/game/${gameItem.slug}">${escapeHtml(gameItem.name)}</a>`).join('')}
-      </nav>
-    </main>
-    ${publicFooter()}
-  `
-  window.scrollTo({top: 0, behavior: reducedMotion() ? 'auto' : 'smooth'})
-}
-
-function publicSection(section: (typeof publicPages)[PublicPageSlug]['sections'][number]) {
-  return `<section class="public-content-section">
-    <h2>${escapeHtml(section.heading)}</h2>
-    ${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
-    ${section.bullets ? `<ul>${section.bullets.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
-  </section>`
-}
-
-function faqItem(item: (typeof faqItems)[number]) {
-  return `<details class="faq-item">
-    <summary>${escapeHtml(item.question)}</summary>
-    <p>${escapeHtml(item.answer)}</p>
-  </details>`
-}
-
-function publicFooter() {
-  return `<footer class="site-footer">
-    <div>
-      <a class="brand" href="/">${logoMark()}<span>Ruang Main</span></a>
-      <p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p>
-    </div>
-    <nav aria-label="Navigasi footer">
-      <a href="/tentang">Tentang</a>
-      <a href="/cara-bermain">Cara bermain</a>
-      <a href="/faq">FAQ</a>
-      <a href="/kontak">Kontak</a>
-      <a href="/privasi">Privasi</a>
-      <a href="/ketentuan">Ketentuan</a>
-    </nav>
-    <p class="footer-note">© ${new Date().getFullYear()} Ruang Main. Dibuat untuk hiburan bersama.</p>
-  </footer>`
-}
-
-function updateDocumentMeta(title: string = siteMeta.title, description: string = siteMeta.description, path: string = '/') {
-  const canonicalUrl = new URL(path, siteUrl).href
-  document.title = title
-  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description)
-  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
-  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title)
-  document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description)
-  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
-  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title)
-  document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description)
-}
-
 function renderLobby() {
   const players = game?.players ?? []
   const ready = isHost && players.length >= 2
   app.innerHTML = `
-    <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: gameById(activeGameId).name})}
     <main id="main-content" class="lobby-shell">
       <section class="lobby-card">
         <p class="eyebrow">ROOM PRIVATE</p>
@@ -607,21 +330,14 @@ function renderGame() {
   const rollLabel = isAnimatingPawn ? 'Pion bergerak...' : currentGame.pendingCard ? 'Selesaikan kartu' : currentGame.auction ? 'Lelang berlangsung' : currentGame.debt ? 'Selesaikan utang' : currentGame.pendingTrade ? 'Trade berlangsung' : currentPlayer?.inJail && canRoll ? 'Coba dadu kembar' : canRoll ? 'Lempar dadu' : 'Menunggu giliran'
 
   app.innerHTML = `
-    <header class="game-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <div class="game-meta">
-        <span class="live-badge"><span class="status-dot"></span>${isDemo ? 'Mode demo' : 'Room aktif'}</span>
-        <span class="room-mini">${escapeHtml(activeRoomCode || 'DEMO')}</span>
-      </div>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Kota Raya', compact: false, roomCode: activeRoomCode || 'DEMO', status: isDemo ? 'Mode demo' : 'Room aktif'})}
 
     <main id="main-content" class="game-layout">
       <aside class="side-column players-column" aria-label="Informasi pemain">
         <section class="panel">
           <div class="panel-heading"><p class="step-label">Pemain</p><span>${currentGame.players.length}/6</span></div>
           <div class="player-list">
-            ${currentGame.players.map((player, index) => playerRow(player, index, player.id === currentGame.currentPlayerId)).join('')}
+            ${currentGame.players.map((player, index) => monopolyPlayerRow(player, index, player.id === currentGame.currentPlayerId)).join('')}
           </div>
         </section>
 
@@ -659,7 +375,7 @@ function renderGame() {
 
       <section class="board-wrap" aria-label="Papan permainan Kota Raya">
         <div class="board" aria-busy="${isAnimatingPawn}">
-          ${board.map((cell, index) => boardCell(cell, index)).join('')}
+          ${board.map((_, index) => monopolyBoardCell(currentGame, index)).join('')}
           <div class="board-center">
             <svg class="center-map" viewBox="0 0 320 116" aria-hidden="true">
               <path d="M18 61 52 48l35 7 27-17 38 9 25-22 24 23 43-8 21 18-36 10-31-8-29 20-46-9-35 14-32-8Z"/>
@@ -734,13 +450,13 @@ function renderGame() {
       <div id="deck-dialog-content"></div>
     </dialog>
     <dialog id="trade-dialog" class="asset-dialog trade-dialog">
-      <div id="trade-dialog-content">${tradeForm(currentGame)}</div>
+      <div id="trade-dialog-content">${tradeForm(currentGame, localPeerId, isDemo)}</div>
       <form method="dialog"><button class="button button-secondary" value="close">Batal</button></form>
     </dialog>
     ${currentGame.pendingCard ? pendingCardOverlay(currentGame) : ''}
-    ${currentGame.auction ? auctionOverlay(currentGame) : ''}
-    ${currentGame.pendingTrade ? tradeOverlay(currentGame) : ''}
-    ${currentGame.debt ? debtOverlay(currentGame) : ''}
+    ${currentGame.auction ? auctionOverlay(currentGame, localPeerId, isDemo) : ''}
+    ${currentGame.pendingTrade ? tradeOverlay(currentGame, localPeerId, isDemo) : ''}
+    ${currentGame.debt ? debtOverlay(currentGame, localPeerId, isDemo) : ''}
     ${currentGame.phase === 'finished' ? resultOverlay(currentGame) : ''}
   `
 
@@ -785,6 +501,7 @@ function centerActiveCellOnMobile(state: GameState) {
 
 function startOnline(host: boolean, rawName: string, rawCode: string) {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
+  if (selectedGameId === 'fruit-merge') return startFruitGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -923,6 +640,7 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
 
 function openDemo() {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
+  if (selectedGameId === 'fruit-merge') return startFruitGame()
   activeGameId = selectedGameId
   if (activeGameId === 'ludo') {
     ludoGame = createLudoDemo()
@@ -1419,7 +1137,8 @@ async function leaveToHome(message = '') {
   lastAnimatedLudoRollSequence = -1
   network = null
   game = null
-  arrowGame = null
+  arrowController.reset()
+  fruitController.reset()
   snakesGame = null
   ludoGame = null
   view = 'home'
@@ -1431,13 +1150,35 @@ async function leaveToHome(message = '') {
 
 function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
-    button.addEventListener('click', (event) => {
+    button.addEventListener('click', async (event) => {
       event.preventDefault()
-      const message = view === 'arrow-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
-      if (!isDemo && !window.confirm(message)) return
+      const message = view === 'arrow-game' || view === 'fruit-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      if (!isDemo && !await confirmLeave(message)) return
       void leaveToHome()
     }),
   )
+}
+
+function confirmLeave(message: string) {
+  let dialog = document.querySelector<HTMLDialogElement>('#leave-dialog')
+  if (!dialog) {
+    document.body.insertAdjacentHTML('beforeend', `<dialog class="asset-dialog leave-dialog" id="leave-dialog" aria-labelledby="leave-dialog-title" aria-describedby="leave-dialog-copy">
+      <form method="dialog">
+        <p class="step-label">Keluar permainan</p>
+        <h2 id="leave-dialog-title">Yakin mau keluar?</h2>
+        <p class="leave-dialog-copy" id="leave-dialog-copy"></p>
+        <div class="leave-dialog-actions">
+          <button class="button button-secondary" type="submit" value="cancel" autofocus>Tetap bermain</button>
+          <button class="button leave-confirm" type="submit" value="confirm">Keluar sekarang</button>
+        </div>
+      </form>
+    </dialog>`)
+    dialog = document.querySelector<HTMLDialogElement>('#leave-dialog')!
+  }
+  dialog.querySelector('#leave-dialog-copy')!.textContent = message
+  dialog.returnValue = 'cancel'
+  dialog.showModal()
+  return new Promise<boolean>((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), {once: true}))
 }
 
 async function copyRoomCode() {
@@ -1447,163 +1188,6 @@ async function copyRoomCode() {
   } catch {
     showToast(`Kode room: ${activeRoomCode}`)
   }
-}
-
-function boardCell(cell: (typeof board)[number], index: number) {
-  const {row, column} = boardPosition(index)
-  const players = game?.players.filter((player) => !player.bankrupt && player.position === index) ?? []
-  const price = cell.price ? formatRupiah(cell.price).replace('Rp', 'Rp ') : ''
-  const asset = game?.assets.find((item) => item.position === index)
-  const owner = asset?.ownerId ? game?.players.find((player) => player.id === asset.ownerId) : null
-  const completeGroup = Boolean(owner && cell.group && game && ownsCompleteGroup(game, owner.id, cell.group))
-  const building = asset?.hotel
-    ? '<span class="mini-hotel" aria-hidden="true"></span>'
-    : Array.from({length: asset?.houses ?? 0}, () => '<span class="mini-house" aria-hidden="true"></span>').join('')
-  const symbol = cell.type === 'chance' ? '<b class="cell-symbol">?</b>' : cell.type === 'community' ? '<b class="cell-symbol chest">▣</b>' : ''
-  const side = index > 10 && index < 20 ? 'side-left' : index > 30 ? 'side-right' : index > 20 && index < 30 ? 'side-top' : 'side-bottom'
-  const ownerLabel = owner ? `, milik ${owner.name}${completeGroup ? ', kompleks lengkap' : ''}` : ''
-  const buildingLabel = asset?.hotel ? ', satu hotel' : asset?.houses ? `, ${asset.houses} rumah` : ''
-
-  return `
-    <button
-      type="button"
-      class="board-cell ${side} ${cell.type} ${cell.group ? `group-${cell.group}` : ''} ${owner ? 'is-owned' : ''} ${asset?.mortgaged ? 'is-mortgaged' : ''} ${completeGroup ? 'is-complete-group' : ''}"
-      style="grid-row:${row};grid-column:${column}${owner ? `;--owner-color:${owner.color}` : ''}"
-      data-cell="${index}"
-      aria-label="${escapeHtml(cell.name)}${price ? `, harga ${escapeHtml(price)}` : ''}${escapeHtml(ownerLabel)}${escapeHtml(buildingLabel)}"
-    >
-      ${cell.group ? '<span class="property-strip"></span>' : ''}
-      ${owner ? `<span class="owner-block" title="Milik ${escapeHtml(owner.name)}${completeGroup ? ' · Kompleks lengkap' : ''}" aria-hidden="true"><b>${initial(owner.name)}</b></span>` : ''}
-      <span class="cell-body">
-        ${symbol}
-        <span class="cell-name">${escapeHtml(cell.name)}</span>
-        ${price ? `<span class="cell-price">${escapeHtml(price)}</span>` : ''}
-      </span>
-      <span class="cell-assets">${building}</span>
-      <span class="pawn-stack">${players.map((player) => {
-        const playerIndex = game!.players.indexOf(player)
-        return `<i class="pawn pawn-${playerIndex}" data-pawn-index="${playerIndex}" title="${escapeHtml(player.name)}"></i>`
-      }).join('')}</span>
-    </button>`
-}
-
-function boardPosition(index: number) {
-  if (index === 0) return {row: 11, column: 11}
-  if (index < 10) return {row: 11, column: 11 - index}
-  if (index === 10) return {row: 11, column: 1}
-  if (index < 20) return {row: 21 - index, column: 1}
-  if (index === 20) return {row: 1, column: 1}
-  if (index < 30) return {row: 1, column: index - 19}
-  if (index === 30) return {row: 1, column: 11}
-  return {row: index - 29, column: 11}
-}
-
-function playerRow(player: GameState['players'][number], index: number, active: boolean) {
-  const jailCards = player.jailFreeCards.chance + player.jailFreeCards.community
-  return `
-    <div class="player-row ${active ? 'is-active' : ''} ${player.bankrupt ? 'is-bankrupt' : ''}">
-      <span class="player-avatar pawn-${index}">${initial(player.name)}</span>
-      <div><strong>${escapeHtml(player.name)}</strong><small>${formatRupiah(player.balance)}</small></div>
-      ${jailCards ? `<span class="inventory-tag" title="Kartu Bebas Penjara">Bebas ${jailCards}</span>` : ''}
-      ${player.inJail ? '<span class="inventory-tag jail-tag">Penjara</span>' : ''}
-      ${player.bankrupt ? '<span class="inventory-tag">Bangkrut</span>' : ''}
-      ${active ? '<span class="turn-tag">Giliran</span>' : ''}
-    </div>`
-}
-
-function jailActions(state: GameState, playerId: string) {
-  const player = state.players.find((item) => item.id === playerId)
-  if (!player) return ''
-  return `<div class="jail-actions" aria-label="Pilihan keluar dari Penjara">
-    <p>Percobaan dadu ${player.jailAttempts}/3</p>
-    <button class="button button-secondary" data-pay-jail type="button" ${player.balance >= JAIL_FINE ? '' : 'disabled'}>Bayar ${formatRupiah(JAIL_FINE)}</button>
-    ${(['chance', 'community'] as const).map((deck) => player.jailFreeCards[deck] ? `<button class="button button-secondary" data-jail-card="${deck}" type="button">Pakai kartu ${deck === 'chance' ? 'Kesempatan' : 'Dana Umum'}</button>` : '').join('')}
-  </div>`
-}
-
-function auctionOverlay(state: GameState) {
-  const auction = state.auction!
-  const bidder = auction.highestBidderId ? state.players.find((player) => player.id === auction.highestBidderId) : null
-  const actor = state.players.find((player) => player.id === localPeerId)
-  const minimum = minimumAuctionBid(auction)
-  const canBid = Boolean((isDemo || actor) && !actor?.bankrupt)
-  return `<div class="flow-overlay" role="dialog" aria-modal="true" aria-labelledby="auction-title">
-    <section class="flow-card auction-card">
-      <p class="eyebrow">LELANG TERBUKA</p>
-      <h2 id="auction-title">${escapeHtml(board[auction.position].name)}</h2>
-      <p class="flow-amount">${auction.highestBid ? formatRupiah(auction.highestBid) : 'Belum ada tawaran'}</p>
-      <p class="muted">${bidder ? `Tertinggi oleh ${escapeHtml(bidder.name)}` : `Mulai dari ${formatRupiah(minimum)}`}</p>
-      <strong id="auction-time" class="auction-time">15 detik</strong>
-      <div class="bid-controls">
-        <label for="bid-amount">Tawaranmu</label>
-        <input id="bid-amount" type="number" inputmode="numeric" min="${minimum}" step="10000" value="${minimum}" ${canBid ? '' : 'disabled'}>
-        <button class="button button-primary" id="place-bid" type="button" ${canBid ? '' : 'disabled'}>Pasang tawaran</button>
-      </div>
-    </section>
-  </div>`
-}
-
-function tradeForm(state: GameState) {
-  const fromId = isDemo ? state.currentPlayerId : localPeerId
-  const from = state.players.find((player) => player.id === fromId)
-  if (!from) return '<p>Trade belum tersedia.</p>'
-  const others = state.players.filter((player) => player.id !== from.id && !player.bankrupt)
-  const ownAssets = state.assets.filter((asset) => asset.ownerId === from.id)
-  const assetOptions = (assets: typeof state.assets) => `<option value="">Tanpa aset</option>${assets.map((asset) => `<option value="${asset.position}">${escapeHtml(board[asset.position].name)}${asset.mortgaged ? ' (hipotek)' : ''}</option>`).join('')}`
-  const cardOptions = (player: typeof from) => `<option value="">Tanpa kartu</option>${player.jailFreeCards.chance ? '<option value="chance">Bebas Penjara · Kesempatan</option>' : ''}${player.jailFreeCards.community ? '<option value="community">Bebas Penjara · Dana Umum</option>' : ''}`
-  return `<p class="eyebrow">NEGOSIASI</p><h2>Buat tawaran trade</h2>
-    <div class="trade-grid">
-      <label>Dengan pemain<select id="trade-player">${others.map((player) => `<option value="${player.id}">${escapeHtml(player.name)}</option>`).join('')}</select></label>
-      <label>Uang yang kamu beri<input id="trade-cash-from" type="number" min="0" step="10000" value="0"></label>
-      <label>Aset yang kamu beri<select id="trade-asset-from">${assetOptions(ownAssets)}</select></label>
-      <label>Kartu yang kamu beri<select id="trade-card-from">${cardOptions(from)}</select></label>
-      <label>Uang yang kamu minta<input id="trade-cash-to" type="number" min="0" step="10000" value="0"></label>
-      <label>Aset yang kamu minta<select id="trade-asset-to"><option value="">Pilih pemain dahulu</option>${state.assets.filter((asset) => others.some((player) => player.id === asset.ownerId)).map((asset) => `<option value="${asset.position}">${escapeHtml(board[asset.position].name)} · ${escapeHtml(state.players.find((player) => player.id === asset.ownerId)?.name ?? '')}</option>`).join('')}</select></label>
-      <label>Kartu yang kamu minta<select id="trade-card-to"><option value="">Tanpa kartu</option><option value="chance">Bebas Penjara · Kesempatan</option><option value="community">Bebas Penjara · Dana Umum</option></select></label>
-    </div>
-    <button class="button button-primary" id="send-trade" type="button">Kirim tawaran</button>`
-}
-
-function tradeOverlay(state: GameState) {
-  const trade = state.pendingTrade!
-  const from = state.players.find((player) => player.id === trade.fromId)
-  const to = state.players.find((player) => player.id === trade.toId)
-  const canRespond = isDemo || trade.toId === localPeerId
-  const detail = [
-    trade.cashFrom ? `${from?.name} memberi ${formatRupiah(trade.cashFrom)}` : '',
-    trade.assetFrom !== null ? `${from?.name} memberi ${board[trade.assetFrom].name}` : '',
-    trade.jailCardFrom ? `${from?.name} memberi kartu Bebas Penjara` : '',
-    trade.cashTo ? `${to?.name} memberi ${formatRupiah(trade.cashTo)}` : '',
-    trade.assetTo !== null ? `${to?.name} memberi ${board[trade.assetTo].name}` : '',
-    trade.jailCardTo ? `${to?.name} memberi kartu Bebas Penjara` : '',
-  ].filter(Boolean)
-  return `<div class="flow-overlay" role="dialog" aria-modal="true" aria-labelledby="trade-title"><section class="flow-card">
-    <p class="eyebrow">TAWARAN TRADE</p><h2 id="trade-title">${escapeHtml(from?.name ?? '')} ↔ ${escapeHtml(to?.name ?? '')}</h2>
-    <ul class="trade-summary">${detail.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
-    ${canRespond ? '<div class="flow-actions"><button class="button button-primary" id="accept-trade" type="button">Terima</button><button class="button button-secondary" id="reject-trade" type="button">Tolak</button></div>' : `<p class="muted">Menunggu jawaban ${escapeHtml(to?.name ?? 'pemain')}.</p>`}
-  </section></div>`
-}
-
-function debtOverlay(state: GameState) {
-  const debt = state.debt!
-  const player = state.players.find((item) => item.id === debt.playerId)
-  const canRespond = isDemo || debt.playerId === localPeerId
-  const liquidatable = state.assets.some((asset) => asset.ownerId === debt.playerId && (asset.hotel || asset.houses > 0 || !asset.mortgaged))
-  return `<div class="flow-overlay flow-overlay-soft" role="dialog" aria-modal="true" aria-labelledby="debt-title"><section class="flow-card debt-card">
-    <p class="eyebrow">SALDO MINUS</p><h2 id="debt-title">${escapeHtml(player?.name ?? 'Pemain')} berutang ${formatRupiah(Math.abs(player?.balance ?? 0))}</h2>
-    <p class="muted">Klik properti untuk menjual bangunan atau menghipotekkan aset. Permainan lanjut otomatis saat saldo kembali nol atau lebih.</p>
-    <button class="button button-secondary danger-button" id="declare-bankruptcy" type="button" ${canRespond && !liquidatable ? '' : 'disabled'}>Nyatakan bangkrut</button>
-    ${liquidatable ? '<p class="field-hint">Likuidasi semua aset yang masih tersedia sebelum menyerah.</p>' : ''}
-  </section></div>`
-}
-
-function resultOverlay(state: GameState) {
-  const winner = state.players.find((player) => player.id === state.winnerId)
-  return `<div class="flow-overlay" role="dialog" aria-modal="true" aria-labelledby="winner-title"><section class="flow-card result-card">
-    <p class="eyebrow">PERMAINAN SELESAI</p><h2 id="winner-title">${escapeHtml(winner?.name ?? 'Pemain')} menguasai Kota Raya!</h2>
-    <p class="flow-amount">${formatRupiah(winner?.balance ?? 0)}</p>
-    <button class="button button-primary" type="button" data-leave>Kembali ke beranda</button>
-  </section></div>`
 }
 
 const cardEffectLabels: Record<CardEffect['kind'], string> = {

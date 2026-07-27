@@ -1,6 +1,6 @@
 import type {RoomGameId} from '../network/network'
 
-export type GameId = RoomGameId | 'arrow-puzzle'
+export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge'
 
 export type GameCatalogItem = {
   id: GameId
@@ -112,6 +112,29 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
     ],
   },
+  {
+    id: 'fruit-merge',
+    slug: 'fruit-merge',
+    name: 'Fruit Merge',
+    playerLabel: 'SOLO',
+    genre: 'Puzzle physics',
+    description: 'Jatuhkan dan gabungkan buah sejenis sampai menjadi semangka tanpa melewati batas wadah.',
+    mode: 'solo',
+    seoTitle: 'Main Fruit Merge Gratis | Ruang Main',
+    seoDescription: 'Main Fruit Merge gratis di browser. Jatuhkan buah, gabungkan pasangan sejenis, kumpulkan skor, dan jaga tumpukan tetap di dalam wadah.',
+    guide: [
+      {
+        heading: 'Cara bermain Fruit Merge',
+        paragraphs: ['Arahkan buah ke posisi yang diinginkan, lalu jatuhkan ke dalam wadah. Dua buah sejenis akan bergabung menjadi buah berikutnya.'],
+        bullets: ['Rencanakan posisi sebelum menjatuhkan', 'Satukan buah dengan jenis yang sama', 'Buat ruang untuk buah berukuran besar', 'Kejar skor setinggi mungkin'],
+      },
+      {
+        heading: 'Tumpukan tidak boleh melewati batas',
+        paragraphs: ['Permainan selesai jika buah yang sudah tenang bertahan di atas garis batas. Progres kembali kosong setelah halaman dimuat ulang.'],
+        bullets: ['Permainan solo', 'Physics berjalan langsung di browser', 'Tanpa login', 'Tidak ada penyimpanan progres'],
+      },
+    ],
+  },
 ] as const
 
 export function gameById(id: GameId) {
@@ -125,7 +148,9 @@ export function gameCard(item: GameCatalogItem, selected: boolean) {
       ? '<span class="game-card-snakes" aria-hidden="true"><i></i><b>100</b><i></i></span>'
       : item.id === 'ludo'
         ? '<span class="game-card-ludo-board" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span>'
-        : '<span class="game-card-arrows" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M78 78H34V48H66V22H36"/><path d="m45 12-12 10 12 10"/></svg></span>'
+        : item.id === 'arrow-puzzle'
+          ? '<span class="game-card-arrows" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M78 78H34V48H66V22H36"/><path d="m45 12-12 10 12 10"/></svg></span>'
+          : '<span class="game-card-fruit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>'
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
     <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>

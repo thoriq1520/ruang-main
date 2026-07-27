@@ -22,6 +22,24 @@ export function logoMark() {
   return `<svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="13" height="13" rx="4"/><rect x="22" y="5" width="13" height="13" rx="4"/><rect x="5" y="22" width="13" height="13" rx="4"/><path d="M28.5 22v13M22 28.5h13"/></svg>`
 }
 
+type GameHeaderOptions = {
+  title: string
+  compact?: boolean
+  roomCode?: string
+  status?: string
+  className?: string
+}
+
+export function gameHeader({title, compact = true, roomCode, status, className = ''}: GameHeaderOptions) {
+  return `<header class="${compact ? 'site-header compact-header' : 'game-header'} ${escapeHtml(className)}">
+    <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
+    ${roomCode
+      ? `<div class="game-meta"><span class="live-badge"><span class="status-dot"></span>${escapeHtml(status ?? 'Room aktif')}</span><span class="room-mini">${escapeHtml(roomCode)}</span></div>`
+      : `<span class="game-id">${escapeHtml(title)}</span>`}
+    <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
+  </header>`
+}
+
 export function dieView(value: number | null, index = 0, animate = false) {
   if (value === null) return `<span class="die die-empty" aria-label="Dadu belum dilempar">-</span>`
 

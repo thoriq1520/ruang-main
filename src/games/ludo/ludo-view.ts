@@ -1,5 +1,5 @@
 import {globalTrackIndex, ludoColorNames, ludoColors, ludoHomeCells, ludoTrackCells, type LudoColor, type LudoState} from './ludo-game'
-import {copyIcon, dieView, escapeHtml, initial, logoMark} from '../../ui'
+import {copyIcon, dieView, escapeHtml, gameHeader, initial} from '../../shared/ui'
 
 const baseTokenCells: Record<LudoColor, readonly (readonly [number, number])[]> = {
   red: [[1, 1], [1, 4], [4, 1], [4, 4]],
@@ -13,11 +13,7 @@ export function ludoLobbyScreen(state: LudoState | null, roomCode: string, host:
   const local = players.find((player) => player.id === localPeerId)
   const ready = players.length >= 2 && players.every((player) => player.color)
   return `
-    <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <span class="game-id">Ludo</span>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Ludo', className: 'ludo-header'})}
     <main id="main-content" class="ludo-lobby-shell">
       <section class="ludo-lobby-card">
         <div class="ludo-lobby-heading">
@@ -45,14 +41,10 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
   const current = state.players.find((player) => player.id === state.currentPlayerId)
   const winner = state.players.find((player) => player.id === state.winnerId)
   return `
-    <header class="game-header ludo-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
-      <div class="game-meta"><span class="live-badge"><span class="status-dot"></span>${demo ? 'Mode demo' : 'Room aktif'}</span><span class="room-mini">${escapeHtml(roomCode)}</span></div>
-      <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
-    </header>
+    ${gameHeader({title: 'Ludo', compact: false, roomCode, status: demo ? 'Mode demo' : 'Room aktif', className: 'ludo-header'})}
     <main id="main-content" class="ludo-game-shell">
       <aside class="ludo-side-panel">
-        <div><p class="eyebrow">LUDO KLASIK</p><h1>Balapan pulang</h1><p>Keluarkan pion dengan angka enam. Bawa keempat pion tepat ke rumah untuk menang.</p></div>
+        <div><p class="game-panel-label">Permainan</p><h1>Ludo</h1><p>Keluarkan pion dengan angka enam. Bawa keempat pion tepat ke rumah untuk menang.</p></div>
         <div class="ludo-turn-card ${current?.color ? `color-${current.color}` : ''}"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="single-die dice-row" role="status" aria-live="polite">${dieView(state.lastRoll, 0, animateDice)}</div>
           ${state.pendingRoll !== null && canChoose ? `<p>Pilih pion untuk bergerak ${state.pendingRoll} langkah.</p><div class="ludo-token-choices">${movableTokens.map((index) => `<button type="button" data-ludo-token="${index}"><i aria-hidden="true"></i>Pion ${index + 1}</button>`).join('')}</div>` : `<button class="button button-primary" id="roll-ludo" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : state.pendingRoll !== null ? 'Memilih pion...' : 'Menunggu giliran'}</button>`}
         </div>

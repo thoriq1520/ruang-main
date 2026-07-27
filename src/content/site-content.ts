@@ -4,7 +4,7 @@ export const siteMeta = {
   name: 'Ruang Main',
   alternateName: 'Mini Games Coop',
   title: 'Ruang Main - Mini Game Browser Gratis',
-  description: 'Main Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser tanpa akun atau instalasi.',
+  description: 'Main Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser tanpa akun atau instalasi.',
 } as const
 
 export type FaqItem = {
@@ -36,7 +36,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Game apa yang tersedia?',
-    answer: 'Tersedia Kota Raya untuk 2-6 pemain, Ular Tangga untuk 2-4 pemain dengan empat peta, dan Arrow Puzzle untuk permainan solo.',
+    answer: 'Tersedia Kota Raya, Ular Tangga, Ludo, Arrow Puzzle, dan Fruit Merge. Game dapat dimainkan sendiri atau melalui room privat sesuai modenya.',
   },
   {
     question: 'Apakah Ruang Main gratis?',
@@ -76,7 +76,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
       {
         heading: 'Solo atau bersama teman',
         paragraphs: [
-          'Kota Raya adalah game strategi papan untuk 2-6 pemain. Ular Tangga adalah balapan P2P untuk 2-4 pemain dengan empat pilihan peta. Arrow Puzzle adalah tantangan logika solo dengan level yang hanya bertahan selama sesi.',
+          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle dan Fruit Merge adalah game solo dengan progres yang hanya bertahan selama sesi.',
           'Setiap game di Ruang Main dirancang untuk sesi singkat bersama teman, tanpa registrasi dan tanpa progres akun permanen.',
         ],
       },
