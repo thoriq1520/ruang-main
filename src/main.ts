@@ -37,7 +37,7 @@ import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './con
 import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './games/arrow/arrow-game'
 import {arrowGameScreen} from './games/arrow/arrow-view'
 import {gameById, gameCard, gameCatalog, type GameId} from './games/game-catalog'
-import {copyIcon, dieView, escapeHtml, initial, logoMark} from './ui'
+import {copyIcon, dieView, escapeHtml, initial, logoMark, requestAdSafely} from './ui'
 import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakeMove, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
 import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
 import {addLudoPlayer, createLudoDemo, createLudoLobby, globalTrackIndex, isLudoState, ludoColors, ludoHomeCells, ludoTrackCells, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoMove, type LudoState} from './games/ludo/ludo-game'
@@ -344,8 +344,7 @@ function homeSupport() {
 }
 
 function requestHomeAd() {
-  const adWindow = window as Window & {adsbygoogle?: unknown[]}
-  ;(adWindow.adsbygoogle ??= []).push({})
+  requestAdSafely(window)
 }
 
 function renderPublicPage(slug: PublicPageSlug) {

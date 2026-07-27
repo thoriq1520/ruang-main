@@ -2,6 +2,18 @@ export function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'})[character]!)
 }
 
+type AdWindow = {adsbygoogle?: {push(value: unknown): unknown}}
+
+export function requestAdSafely(adWindow: object) {
+  const target = adWindow as AdWindow
+  try {
+    const queue = target.adsbygoogle ?? (target.adsbygoogle = [] as unknown[])
+    queue.push({})
+  } catch {
+    // Iklan pihak ketiga tidak boleh menghentikan interaksi game.
+  }
+}
+
 export function initial(name: string) {
   return escapeHtml(name.trim().charAt(0).toUpperCase() || '?')
 }
