@@ -65,7 +65,7 @@ export function arrowGameScreen(state: ArrowGameState) {
 
   return `
     <header class="site-header compact-header arrow-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <span class="game-id">Arrow Puzzle</span>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>

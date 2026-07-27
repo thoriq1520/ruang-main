@@ -1,5 +1,12 @@
 export type PublicPageSlug = 'tentang' | 'cara-bermain' | 'faq' | 'kontak' | 'privasi' | 'ketentuan'
 
+export const siteMeta = {
+  name: 'Ruang Main',
+  alternateName: 'Mini Games Coop',
+  title: 'Ruang Main - Mini Game Browser Gratis',
+  description: 'Main Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser tanpa akun atau instalasi.',
+} as const
+
 export type FaqItem = {
   question: string
   answer: string
@@ -24,15 +31,15 @@ export const publicPageSlugs: PublicPageSlug[] = ['tentang', 'cara-bermain', 'fa
 
 export const faqItems: FaqItem[] = [
   {
-    question: 'Apa itu Mini Games Coop?',
-    answer: 'Mini Games Coop adalah koleksi game kasual solo dan P2P yang dimainkan langsung dari browser.',
+    question: 'Apa itu Ruang Main?',
+    answer: 'Ruang Main adalah koleksi game kasual solo dan P2P yang dimainkan langsung dari browser.',
   },
   {
     question: 'Game apa yang tersedia?',
     answer: 'Tersedia Kota Raya untuk 2-6 pemain, Ular Tangga untuk 2-4 pemain dengan empat peta, dan Arrow Puzzle untuk permainan solo.',
   },
   {
-    question: 'Apakah Mini Games Coop gratis?',
+    question: 'Apakah Ruang Main gratis?',
     answer: 'Ya. Game dapat digunakan gratis tanpa membuat akun dan tanpa membeli item digital.',
   },
   {
@@ -63,14 +70,14 @@ export const faqItems: FaqItem[] = [
 
 export const publicPages: Record<PublicPageSlug, PublicPage> = {
   tentang: {
-    title: 'Game di Mini Games Coop',
-    description: 'Mini Games Coop adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi dan akun.',
+    title: 'Game di Ruang Main',
+    description: 'Ruang Main adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi dan akun.',
     sections: [
       {
         heading: 'Solo atau bersama teman',
         paragraphs: [
           'Kota Raya adalah game strategi papan untuk 2-6 pemain. Ular Tangga adalah balapan P2P untuk 2-4 pemain dengan empat pilihan peta. Arrow Puzzle adalah tantangan logika solo dengan level yang hanya bertahan selama sesi.',
-          'Setiap game di Mini Games Coop dirancang untuk sesi singkat bersama teman, tanpa registrasi dan tanpa progres akun permanen.',
+          'Setiap game di Ruang Main dirancang untuk sesi singkat bersama teman, tanpa registrasi dan tanpa progres akun permanen.',
         ],
       },
       {
@@ -131,7 +138,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
   },
   kontak: {
     title: 'Kontak',
-    description: 'Hubungi pengelola Mini Games Coop untuk melaporkan bug, masalah koneksi, konten tidak tepat, permintaan privasi, atau pertanyaan kerja sama.',
+    description: 'Hubungi pengelola Ruang Main untuk melaporkan bug, masalah koneksi, konten tidak tepat, permintaan privasi, atau pertanyaan kerja sama.',
     sections: [
       {
         heading: 'Kirim laporan',
@@ -151,19 +158,19 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
   },
   privasi: {
     title: 'Kebijakan Privasi',
-    description: 'Kebijakan ini menjelaskan data yang diproses oleh Mini Games Coop, koneksi P2P, layanan pihak ketiga, cookie, dan iklan.',
+    description: 'Kebijakan ini menjelaskan data yang diproses oleh Ruang Main, koneksi P2P, layanan pihak ketiga, cookie, dan iklan.',
     sections: [
       {
         heading: 'Data permainan',
         paragraphs: [
-          'Mini Games Coop tidak menyediakan akun, database pemain, atau penyimpanan permainan permanen. Nama pemain, state game, dan kode room diproses selama sesi berjalan.',
+          'Ruang Main tidak menyediakan akun, database pemain, atau penyimpanan permainan permanen. Nama pemain, state game, dan kode room diproses selama sesi berjalan.',
           'State resmi berada di memori browser host dan dikirim kepada pemain lain melalui koneksi WebRTC. Data sesi hilang ketika permainan berakhir.',
         ],
       },
       {
         heading: 'Koneksi dan layanan pihak ketiga',
         paragraphs: [
-          'Mini Games Coop menggunakan Trystero untuk membantu peer discovery dan komunikasi P2P. Infrastruktur publik yang mendukung koneksi dapat menerima data teknis seperti alamat IP dan metadata jaringan.',
+          'Ruang Main menggunakan Trystero untuk membantu peer discovery dan komunikasi P2P. Infrastruktur publik yang mendukung koneksi dapat menerima data teknis seperti alamat IP dan metadata jaringan.',
           'Hosting, browser, dan penyedia jaringan juga dapat mencatat data teknis sesuai kebijakan masing-masing.',
         ],
       },
@@ -171,7 +178,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
         heading: 'Iklan dan cookie',
         paragraphs: [
           'Situs dapat menampilkan iklan dari Google AdSense. Google dan mitranya dapat memakai cookie atau teknologi serupa untuk menayangkan, membatasi frekuensi, mengukur, dan mempersonalisasi iklan sesuai persetujuan serta hukum yang berlaku.',
-          'Pengguna dapat mengelola preferensi iklan melalui pengaturan Google dan pengaturan cookie pada browser. Aplikasi inti Mini Games Coop tidak membutuhkan cookie akun untuk menjalankan game.',
+          'Pengguna dapat mengelola preferensi iklan melalui pengaturan Google dan pengaturan cookie pada browser. Aplikasi inti Ruang Main tidak membutuhkan cookie akun untuk menjalankan game.',
         ],
       },
       {
@@ -182,12 +189,12 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
   },
   ketentuan: {
     title: 'Ketentuan Penggunaan',
-    description: 'Ketentuan ini mengatur penggunaan wajar Mini Games Coop, tanggung jawab pemain, ketersediaan layanan, konten, dan batas penggunaan situs.',
+    description: 'Ketentuan ini mengatur penggunaan wajar Ruang Main, tanggung jawab pemain, ketersediaan layanan, konten, dan batas penggunaan situs.',
     sections: [
       {
         heading: 'Penggunaan yang diizinkan',
-        paragraphs: ['Mini Games Coop disediakan untuk hiburan. Pengguna wajib memakai layanan secara wajar dan mematuhi hukum yang berlaku.'],
-        bullets: ['Jangan mengganggu koneksi atau pemain lain', 'Jangan mencoba menyisipkan kode berbahaya', 'Jangan menyalahgunakan kanal kontak', 'Jangan mengaku mewakili Mini Games Coop tanpa izin'],
+        paragraphs: ['Ruang Main disediakan untuk hiburan. Pengguna wajib memakai layanan secara wajar dan mematuhi hukum yang berlaku.'],
+        bullets: ['Jangan mengganggu koneksi atau pemain lain', 'Jangan mencoba menyisipkan kode berbahaya', 'Jangan menyalahgunakan kanal kontak', 'Jangan mengaku mewakili Ruang Main tanpa izin'],
       },
       {
         heading: 'Ketersediaan dan tanggung jawab',
@@ -195,7 +202,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
       },
       {
         heading: 'Identitas dan konten',
-        paragraphs: ['Mini Games Coop dan game di dalamnya memakai identitas visual serta konten orisinal dan tidak berafiliasi dengan merek permainan lain. Tautan eksternal tunduk pada kebijakan layanan tujuan.'],
+        paragraphs: ['Ruang Main dan game di dalamnya memakai identitas visual serta konten orisinal dan tidak berafiliasi dengan merek permainan lain. Tautan eksternal tunduk pada kebijakan layanan tujuan.'],
       },
       {
         heading: 'Perubahan',

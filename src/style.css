@@ -2687,6 +2687,30 @@ button:disabled {
   margin-top: 40px;
 }
 
+.game-landing-cta {
+  width: fit-content;
+  margin-top: 28px;
+}
+
+.related-games {
+  max-width: 780px;
+  margin-top: clamp(48px, 7vw, 80px);
+  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  border-top: 1px solid #b8ae9c;
+}
+
+.related-games strong { width: 100%; }
+
+.related-games a {
+  color: #315b46;
+  font-weight: 850;
+  text-underline-offset: 4px;
+}
+
 .site-footer {
   width: min(100% - 32px, 1180px);
   margin: 0 auto;
@@ -4032,6 +4056,10 @@ button:disabled {
 .session-guide dl > div { padding: 20px 18px 20px 0; border-bottom: 1px solid var(--color-border); }
 .session-guide dt { color: var(--color-text-muted); font-size: .72rem; }
 .session-guide dd { margin: 8px 0 0; font-size: 1.08rem; font-weight: 850; }
+.game-guide-links { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.game-guide-links span { width: 100%; color: var(--color-text-muted); font-size: .72rem; }
+.game-guide-links a { color: var(--color-text); font-weight: 800; text-underline-offset: 4px; }
+.game-guide-links a:hover { color: var(--color-primary); }
 .session-links { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px 24px; }
 .session-links a { color: var(--color-primary); font-weight: 800; text-underline-offset: 4px; }
 

@@ -14,7 +14,7 @@ test('halaman publik penting tersedia untuk transparansi situs', () => {
 
 test('identitas produk memisahkan hub dan game pertama', () => {
   const about = `${publicPages.tentang.title} ${publicPages.tentang.description} ${publicPages.tentang.sections.flatMap((section) => section.paragraphs).join(' ')}`
-  assert.match(about, /Mini Games Coop/)
+  assert.match(about, /Ruang Main/)
   assert.match(about, /Kota Raya/)
 })
 

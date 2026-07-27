@@ -33,10 +33,10 @@ import {
   type GameState,
 } from './games/monopoly/game'
 import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network/network'
-import {faqItems, publicPages, publicPageSlugs, type PublicPageSlug} from './content/site-content'
+import {faqItems, publicPages, publicPageSlugs, siteMeta, type PublicPageSlug} from './content/site-content'
 import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './games/arrow/arrow-game'
 import {arrowGameScreen} from './games/arrow/arrow-view'
-import {gameById, gameCard, gameCatalog, type GameId} from './games/game-catalog'
+import {gameById, gameCard, gameCatalog, type GameCatalogItem, type GameId} from './games/game-catalog'
 import {copyIcon, dieView, escapeHtml, initial, logoMark, requestAdSafely} from './ui'
 import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakeMove, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
 import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
@@ -82,7 +82,11 @@ function render() {
   if (view === 'home') {
     const publicPage = publicPageFromPath()
     if (publicPage) renderPublicPage(publicPage)
-    else renderHome()
+    else {
+      const gamePage = gamePageFromPath()
+      if (gamePage) renderGameLandingPage(gamePage)
+      else renderHome()
+    }
   }
   else if (view === 'lobby') renderLobby()
   else if (view === 'game') renderGame()
@@ -103,13 +107,13 @@ function renderHome() {
 
     <main id="main-content" class="home-stage">
       <header class="home-intro">
-        <div><h1>Mau main apa?</h1><p>Empat game browser tanpa akun. Pilih satu, panggil teman, lalu mulai.</p></div>
+        <div><h1>Mau main apa?</h1><p>Ruang Main punya empat game browser tanpa akun. Pilih satu, panggil teman, lalu mulai.</p></div>
         <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Progres hanya hidup selama tab ini terbuka.</span></p>
       </header>
 
       <section class="game-library" aria-labelledby="library-title">
         <div class="library-heading"><h2 id="library-title">Pilih game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
-        <div class="game-shelf" aria-label="Koleksi Mini Games Coop">
+        <div class="game-shelf" aria-label="Koleksi game Ruang Main">
           ${gameCatalog.map((item) => gameCard(item, item.id === selectedGameId)).join('')}
         </div>
       </section>
@@ -228,7 +232,7 @@ function startArrowGame() {
 
 function renderArrowGame() {
   if (!arrowGame) return startArrowGame()
-  updateDocumentMeta('Arrow Puzzle - Mini Games Coop', 'Game puzzle solo sementara yang dimainkan langsung dari browser.')
+  updateDocumentMeta('Main Arrow Puzzle Gratis | Ruang Main', 'Main Arrow Puzzle gratis langsung dari browser tanpa akun. Progres hanya tersimpan selama tab terbuka.', '/game/arrow-puzzle')
   app.innerHTML = arrowGameScreen(arrowGame)
   bindLeaveButtons()
 
@@ -292,6 +296,11 @@ function publicPageFromPath(): PublicPageSlug | null {
   return publicPageSlugs.includes(slug) ? slug : null
 }
 
+function gamePageFromPath(): GameCatalogItem | null {
+  const match = location.pathname.match(/^\/game\/([^/]+)\/?$/)
+  return match ? gameCatalog.find((item) => item.slug === match[1]) ?? null : null
+}
+
 function publicHeader(active?: PublicPageSlug) {
   const links: Array<[PublicPageSlug, string]> = [
     ['tentang', 'Game'],
@@ -299,9 +308,9 @@ function publicHeader(active?: PublicPageSlug) {
     ['faq', 'FAQ'],
   ]
   return `<header class="site-header public-header">
-    <a class="brand" href="/" aria-label="Mini Games Coop, halaman utama">
+    <a class="brand" href="/" aria-label="Ruang Main, halaman utama">
       ${logoMark()}
-      <span>Mini Games Coop</span>
+      <span>Ruang Main</span>
     </a>
     <nav class="public-nav" aria-label="Navigasi informasi">
       ${links.map(([slug, label]) => `<a href="/${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
@@ -327,6 +336,10 @@ function homeSupport() {
         <div><dt>Koneksi</dt><dd>Peer to peer</dd></div>
         <div><dt>Penyimpanan</dt><dd>Hanya di memori</dd></div>
       </dl>
+      <nav class="game-guide-links" aria-label="Panduan setiap game">
+        <span>Panduan game</span>
+        ${gameCatalog.map((item) => `<a href="/game/${item.slug}">${escapeHtml(item.name)}</a>`).join('')}
+      </nav>
       <nav class="session-links" aria-label="Informasi sesi"><a href="/cara-bermain">Cara bermain</a><a href="/privasi">Privasi</a><a href="/kontak">Laporkan masalah</a></nav>
     </section>
 
@@ -349,13 +362,13 @@ function requestHomeAd() {
 
 function renderPublicPage(slug: PublicPageSlug) {
   const page = publicPages[slug]
-  updateDocumentMeta(`${page.title} - Mini Games Coop`, page.description, `/${slug}`)
+  updateDocumentMeta(`${page.title} | Ruang Main`, page.description, `/${slug}`)
   app.innerHTML = `
     ${publicHeader(slug)}
     <main id="main-content" class="public-page public-shell">
       <a class="back-link" href="/">Kembali ke permainan</a>
       <header class="public-page-intro">
-        <p class="step-label">Mini Games Coop</p>
+        <p class="step-label">Ruang Main</p>
         <h1>${escapeHtml(page.title)}</h1>
         <p>${escapeHtml(page.description)}</p>
       </header>
@@ -372,6 +385,35 @@ function renderPublicPage(slug: PublicPageSlug) {
       ${page.action
         ? `<div class="public-action"><a class="button button-primary" href="${escapeHtml(page.action.href)}" ${page.action.external ? 'target="_blank" rel="noreferrer"' : ''}>${escapeHtml(page.action.label)}</a></div>`
         : ''}
+    </main>
+    ${publicFooter()}
+  `
+  window.scrollTo({top: 0, behavior: reducedMotion() ? 'auto' : 'smooth'})
+}
+
+function renderGameLandingPage(item: GameCatalogItem) {
+  updateDocumentMeta(item.seoTitle, item.seoDescription, `/game/${item.slug}`)
+  app.innerHTML = `
+    ${publicHeader()}
+    <main id="main-content" class="public-page game-landing public-shell">
+      <a class="back-link" href="/">Kembali ke semua game</a>
+      <header class="public-page-intro">
+        <p class="step-label">${escapeHtml(item.genre)} · ${escapeHtml(item.playerLabel)} pemain</p>
+        <h1>${escapeHtml(item.name)}</h1>
+        <p>${escapeHtml(item.seoDescription)}</p>
+        <a class="button button-primary game-landing-cta" href="/?game=${item.id}#selected-game">${item.mode === 'solo' ? 'Main sekarang' : 'Buat atau gabung room'}</a>
+      </header>
+
+      ${item.guide.map((section) => `<section class="public-content-section">
+        <h2>${escapeHtml(section.heading)}</h2>
+        ${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+        <ul>${section.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>
+      </section>`).join('')}
+
+      <nav class="related-games" aria-label="Game lain di Ruang Main">
+        <strong>Game lain</strong>
+        ${gameCatalog.filter((gameItem) => gameItem.id !== item.id).map((gameItem) => `<a href="/game/${gameItem.slug}">${escapeHtml(gameItem.name)}</a>`).join('')}
+      </nav>
     </main>
     ${publicFooter()}
   `
@@ -396,7 +438,7 @@ function faqItem(item: (typeof faqItems)[number]) {
 function publicFooter() {
   return `<footer class="site-footer">
     <div>
-      <a class="brand" href="/">${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="/">${logoMark()}<span>Ruang Main</span></a>
       <p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p>
     </div>
     <nav aria-label="Navigasi footer">
@@ -407,11 +449,11 @@ function publicFooter() {
       <a href="/privasi">Privasi</a>
       <a href="/ketentuan">Ketentuan</a>
     </nav>
-    <p class="footer-note">© ${new Date().getFullYear()} Mini Games Coop. Dibuat untuk hiburan bersama.</p>
+    <p class="footer-note">© ${new Date().getFullYear()} Ruang Main. Dibuat untuk hiburan bersama.</p>
   </footer>`
 }
 
-function updateDocumentMeta(title = 'Mini Games Coop - Main Langsung dari Browser', description = 'Koleksi mini game solo dan P2P sementara tanpa akun dan database.', path = '/') {
+function updateDocumentMeta(title: string = siteMeta.title, description: string = siteMeta.description, path: string = '/') {
   const canonicalUrl = new URL(path, siteUrl).href
   document.title = title
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description)
@@ -428,7 +470,7 @@ function renderLobby() {
   const ready = isHost && players.length >= 2
   app.innerHTML = `
     <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>
     <main id="main-content" class="lobby-shell">
@@ -566,7 +608,7 @@ function renderGame() {
 
   app.innerHTML = `
     <header class="game-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <div class="game-meta">
         <span class="live-badge"><span class="status-dot"></span>${isDemo ? 'Mode demo' : 'Room aktif'}</span>
         <span class="room-mini">${escapeHtml(activeRoomCode || 'DEMO')}</span>

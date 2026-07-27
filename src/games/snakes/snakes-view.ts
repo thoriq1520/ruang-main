@@ -7,7 +7,7 @@ export function snakesLobbyScreen(state: SnakesState | null, roomCode: string, h
   const players = state?.players ?? []
   return `
     <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <span class="game-id">Ular Tangga</span>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>
@@ -37,7 +37,7 @@ export function snakesGameScreen(state: SnakesState, roomCode: string, canRoll: 
   const winner = state.players.find((player) => player.id === state.winnerId)
   return `
     <header class="game-header snakes-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <div class="game-meta"><span class="live-badge"><span class="status-dot"></span>${demo ? 'Mode demo' : 'Room aktif'}</span><span class="room-mini">${escapeHtml(roomCode)}</span></div>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>

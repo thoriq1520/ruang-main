@@ -14,7 +14,7 @@ export function ludoLobbyScreen(state: LudoState | null, roomCode: string, host:
   const ready = players.length >= 2 && players.every((player) => player.color)
   return `
     <header class="site-header compact-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <span class="game-id">Ludo</span>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>
@@ -46,7 +46,7 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
   const winner = state.players.find((player) => player.id === state.winnerId)
   return `
     <header class="game-header ludo-header">
-      <a class="brand" href="#" data-leave>${logoMark()}<span>Mini Games Coop</span></a>
+      <a class="brand" href="#" data-leave>${logoMark()}<span>Ruang Main</span></a>
       <div class="game-meta"><span class="live-badge"><span class="status-dot"></span>${demo ? 'Mode demo' : 'Room aktif'}</span><span class="room-mini">${escapeHtml(roomCode)}</span></div>
       <button class="button button-quiet button-small" type="button" data-leave>Keluar</button>
     </header>
