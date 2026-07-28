@@ -1,0 +1,22 @@
+{
+  "name": "@ruang-main/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && node --experimental-strip-types scripts/prerender.mjs",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@elysiajs/eden": "^1.4.6",
+    "@ruang-main/api": "*",
+    "better-auth": "^1.5.3",
+    "trystero": "^0.25.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4"
+  }
+}

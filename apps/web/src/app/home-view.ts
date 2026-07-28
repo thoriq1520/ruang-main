@@ -12,8 +12,8 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
       ${publicHeader()}
       <main id="main-content" class="home-stage">
         <header class="home-intro">
-          <div><h1>Mau main apa?</h1><p>Ruang Main punya lima game browser tanpa akun. Pilih satu, panggil teman, lalu mulai.</p></div>
-          <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Progres hanya hidup selama tab ini terbuka.</span></p>
+          <div><h1>Mau main apa?</h1><p>Lima game langsung dari browser. Main bebas tanpa akun, atau masuk untuk mencatat hasil solo.</p></div>
+          <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Room multiplayer tetap privat dan peer to peer.</span></p>
         </header>
         <section class="game-library" aria-labelledby="library-title">
           <div class="library-heading"><h2 id="library-title">Pilih game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
@@ -27,7 +27,7 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
           ${isSolo ? `
             <div class="play-actions solo-start">
               <button class="button button-primary" type="button" id="start-solo">Mulai bermain</button>
-              <p>Level kembali ke awal setelah halaman dimuat ulang.</p>
+              <p>Akun opsional menyimpan hasil, bukan posisi permainan.</p>
             </div>` : `
             <form class="play-actions" id="room-form" novalidate>
               <button class="button button-primary" type="button" id="create-room">Buat room</button>

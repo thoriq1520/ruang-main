@@ -84,7 +84,7 @@ export function arrowGameScreen(state: ArrowGameState) {
             <strong>Cara bermain</strong>
             <p>Ketuk kepala panah. Jika terhalang, panah memantul dan satu nyawa berkurang.</p>
           </div>
-          <p class="arrow-session-note">Sesi tidak disimpan.</p>
+          <p class="arrow-session-note">Hasil tersimpan jika kamu sudah masuk.</p>
         </div>
         <div class="arrow-board-wrap">
           <div class="arrow-board" style="--arrow-grid-size:${state.size}" role="group" aria-label="Papan Arrow Puzzle level ${state.level}">

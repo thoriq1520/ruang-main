@@ -46,6 +46,7 @@ import {createArrowController} from './games/arrow/arrow-controller'
 import {createFruitController} from './games/fruit/fruit-controller'
 import {homeScreen} from './app/home-view'
 import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
+import {bindAccountUi} from './auth/account-controller'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let game: GameState | null = null
@@ -85,10 +86,16 @@ window.addEventListener('popstate', () => {
 function render() {
   if (view === 'home') {
     const publicPage = publicPageFromPath()
-    if (publicPage) renderPublicPage(app, publicPage)
+    if (publicPage) {
+      renderPublicPage(app, publicPage)
+      bindAccountUi(app)
+    }
     else {
       const gamePage = gamePageFromPath()
-      if (gamePage) renderGameLandingPage(app, gamePage)
+      if (gamePage) {
+        renderGameLandingPage(app, gamePage)
+        bindAccountUi(app)
+      }
       else renderHome()
     }
   }
@@ -107,6 +114,7 @@ function renderHome() {
   updateDocumentMeta()
   const {html, selectedGame, isSolo} = homeScreen(selectedGameId, homeNotice)
   app.innerHTML = html
+  bindAccountUi(app)
 
   requestHomeAd()
 

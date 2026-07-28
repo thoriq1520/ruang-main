@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {FRUIT_BOARD_WIDTH, FruitMergeGame, fruitSpecs} from './fruit-game.ts'
+import {FRUIT_BOARD_WIDTH, FRUIT_DANGER_Y, FruitMergeGame, fruitSpecs} from './fruit-game.ts'
 
 test('buah yang dijatuhkan tetap berada di dalam wadah', () => {
   const game = new FruitMergeGame(() => 0)
@@ -21,3 +21,18 @@ test('dua buah sejenis bergabung menjadi buah berikutnya dan menambah skor', () 
   assert.equal(game.score, 24)
 })
 
+test('buah bergerak yang tetap melewati batas mengakhiri permainan', () => {
+  const game = new FruitMergeGame(() => 0)
+  const fruit = game.spawn(8, FRUIT_BOARD_WIDTH / 2, FRUIT_DANGER_Y - 20 + fruitSpecs[8].radius, 120)
+  fruit.age = 1
+
+  for (let frame = 0; frame < 20; frame += 1) {
+    fruit.y = FRUIT_DANGER_Y - 20 + fruitSpecs[8].radius
+    fruit.vx = 120
+    fruit.vy = 0
+    game.update(.05)
+  }
+
+  assert.equal(game.status, 'over')
+  assert.equal(game.drop(), false)
+})

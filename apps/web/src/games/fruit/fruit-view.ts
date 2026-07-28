@@ -26,7 +26,7 @@ export function fruitGameScreen(game: FruitMergeGame) {
             <strong>Cara bermain</strong>
             <p>Geser penunjuk, lalu ketuk papan. Tumpukan yang melewati garis merah akan mengakhiri permainan.</p>
           </div>
-          <p class="fruit-session-note">Sesi tidak disimpan.</p>
+          <p class="fruit-session-note">Skor tersimpan jika kamu sudah masuk.</p>
         </aside>
         <section class="fruit-board-wrap" aria-label="Area permainan Fruit Merge">
           <canvas id="fruit-canvas" class="fruit-canvas" width="${FRUIT_BOARD_WIDTH}" height="${FRUIT_BOARD_HEIGHT}" tabindex="0" role="button" aria-label="Papan Fruit Merge. Gunakan tombol kiri dan kanan untuk menggeser buah, lalu Enter untuk menjatuhkan."></canvas>
@@ -75,16 +75,19 @@ export function drawFruitBoard(context: CanvasRenderingContext2D, game: FruitMer
 
   const nextKind = game.nextKinds[0]
   const nextRadius = fruitSpecs[nextKind].radius
+  const nextY = 30 + nextRadius
   context.save()
   context.setLineDash([3, 8])
   context.strokeStyle = 'rgba(16, 46, 32, .28)'
   context.lineWidth = 2
   context.beginPath()
   context.moveTo(game.aimX, 14)
-  context.lineTo(game.aimX, FRUIT_DANGER_Y - 8)
+  context.lineTo(game.aimX, nextY - nextRadius - 10)
+  context.moveTo(game.aimX, nextY + nextRadius + 10)
+  context.lineTo(game.aimX, FRUIT_BOARD_HEIGHT)
   context.stroke()
   context.globalAlpha = game.dropCooldown > 0 ? .25 : .72
-  drawFruitCharacter(context, nextKind, game.aimX, 30 + nextRadius, nextRadius, 0, 0)
+  drawFruitCharacter(context, nextKind, game.aimX, nextY, nextRadius, 0, 0)
   context.restore()
 
   for (const fruit of game.fruits) drawFruit(context, fruit)

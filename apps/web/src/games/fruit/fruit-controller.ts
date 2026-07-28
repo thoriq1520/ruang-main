@@ -2,10 +2,19 @@ import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {FRUIT_BOARD_WIDTH, FruitMergeGame, fruitSpecs} from './fruit-game'
 import {drawFruitBoard, drawFruitPreview, fruitGameScreen} from './fruit-view'
+import {submitSoloRun} from '../../api/client'
 
 export function createFruitController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: FruitMergeGame | null = null
   let stopLoop: (() => void) | null = null
+  let startedAt = 0
+  let submitted = false
+
+  const newGame = () => {
+    game = new FruitMergeGame()
+    startedAt = performance.now()
+    submitted = false
+  }
 
   const stop = () => {
     stopLoop?.()
@@ -15,7 +24,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
   const render = () => {
     if (!game) return start()
     stop()
-    updateDocumentMeta('Main Fruit Merge Gratis | Ruang Main', 'Main Fruit Merge gratis langsung dari browser tanpa akun. Gabungkan buah sejenis dan jaga tumpukan tetap di dalam wadah.', '/game/fruit-merge')
+    updateDocumentMeta('Main Fruit Merge Gratis | Ruang Main', 'Main Fruit Merge gratis langsung dari browser. Masuk secara opsional untuk mencatat skor dan peringkat.', '/game/fruit-merge')
     root.innerHTML = fruitGameScreen(game)
     bindLeaveButtons()
 
@@ -64,7 +73,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
     })
     dropButton.addEventListener('click', dropCurrentFruit)
     root.querySelectorAll('[data-restart-fruit]').forEach((button) => button.addEventListener('click', () => {
-      game = new FruitMergeGame()
+      newGame()
       render()
     }))
 
@@ -85,6 +94,10 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
       }
       if (game.status !== lastStatus) {
         result.hidden = game.status !== 'over'
+        if (game.status === 'over' && !submitted) {
+          submitted = true
+          void submitSoloRun({gameId: 'fruit-merge', result: 'lost', score: game.score, largestKind: game.largestKind, durationMs: Math.round(performance.now() - startedAt)})
+        }
         lastStatus = game.status
       }
       dropButton.disabled = game.status !== 'playing' || game.dropCooldown > 0
@@ -97,7 +110,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
 
   const start = () => {
     stop()
-    game = new FruitMergeGame()
+    newGame()
     render()
   }
 
@@ -108,6 +121,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
     reset() {
       stop()
       game = null
+      submitted = false
     },
   }
 }

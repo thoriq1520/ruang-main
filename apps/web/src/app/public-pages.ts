@@ -27,7 +27,20 @@ export function publicHeader(active?: PublicPageSlug) {
     <nav class="public-nav" aria-label="Navigasi informasi">
       ${links.map(([slug, label]) => `<a href="/${slug}" ${active === slug ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
     </nav>
-  </header>`
+    <div class="public-header-actions">
+      <button class="header-text-button" type="button" data-ranking-button>Peringkat</button>
+      <button class="header-account-button" type="button" data-account-button>Akun</button>
+    </div>
+  </header>
+  ${accountDialog('account-dialog', 'Akun Ruang Main')}
+  ${accountDialog('ranking-dialog', 'Peringkat game solo')}`
+}
+
+function accountDialog(id: string, label: string) {
+  return `<dialog class="asset-dialog account-dialog" id="${id}" aria-label="${label}">
+    <button class="account-dialog-close" type="button" data-close-dialog aria-label="Tutup">×</button>
+    <div data-dialog-content></div>
+  </dialog>`
 }
 
 export function homeSupport() {
@@ -42,11 +55,11 @@ export function homeSupport() {
     </aside>
 
     <section class="session-guide" aria-labelledby="support-title">
-      <header><h2 id="support-title">Tentang sesi ini</h2><p>Tidak ada akun dan progres permanen. Room multiplayer menghubungkan browser pemain secara langsung.</p></header>
+      <header><h2 id="support-title">Tentang sesi ini</h2><p>Room multiplayer tetap peer to peer. Akun opsional hanya dipakai untuk mencatat hasil dan peringkat game solo.</p></header>
       <dl>
         <div><dt>Masuk</dt><dd>Satu kode room</dd></div>
         <div><dt>Koneksi</dt><dd>Peer to peer</dd></div>
-        <div><dt>Penyimpanan</dt><dd>Hanya di memori</dd></div>
+        <div><dt>Penyimpanan</dt><dd>Riwayat solo opsional</dd></div>
       </dl>
       <nav class="game-guide-links" aria-label="Panduan setiap game">
         <span>Panduan game</span>

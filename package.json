@@ -1,19 +1,18 @@
 {
-  "name": "mini-games-coop",
+  "name": "ruang-main",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "0.2.0",
+  "workspaces": ["apps/*"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build && node --experimental-strip-types scripts/prerender.mjs",
-    "test": "node --test \"src/**/*.test.ts\"",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "trystero": "^0.25.3"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^7.2.4"
+    "dev": "bun run --parallel --filter '@ruang-main/*' dev",
+    "dev:web": "vite apps/web",
+    "dev:api": "bun --env-file=.env --watch apps/api/src/index.ts",
+    "build": "npm run build --workspace @ruang-main/web",
+    "build:api": "npm run build --workspace @ruang-main/api",
+    "test": "npm run test:web && npm run test:api",
+    "test:web": "npm run test --workspace @ruang-main/web",
+    "test:api": "bun --env-file=.env test apps/api/src",
+    "db:migrate": "bun --env-file=.env apps/api/src/db/migrate.ts",
+    "self-test": "npm test && npm run build && bun --env-file=.env apps/api/src/self-test.ts"
   }
 }

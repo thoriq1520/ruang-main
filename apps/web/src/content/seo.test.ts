@@ -31,7 +31,7 @@ test('robots mengizinkan crawler dan menunjuk sitemap', async () => {
 })
 
 test('Cloudflare memakai URL tanpa trailing slash dan 404 sungguhan', async () => {
-  const config = JSON.parse(await readFile('wrangler.jsonc', 'utf8'))
+  const config = JSON.parse(await readFile('../../wrangler.jsonc', 'utf8'))
   assert.equal(config.assets.html_handling, 'drop-trailing-slash')
   assert.equal(config.assets.not_found_handling, '404-page')
   assert.match(await readFile('public/404.html', 'utf8'), /noindex, follow/)

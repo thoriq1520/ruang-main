@@ -4,7 +4,7 @@ export const siteMeta = {
   name: 'Ruang Main',
   alternateName: 'Mini Games Coop',
   title: 'Ruang Main - Mini Game Browser Gratis',
-  description: 'Main Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser tanpa akun atau instalasi.',
+  description: 'Main Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk riwayat dan peringkat solo.',
 } as const
 
 export type FaqItem = {
@@ -48,7 +48,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Apakah data permainan disimpan?',
-    answer: 'Tidak. State permainan hanya berada di memori browser dan hilang ketika sesi selesai, tab ditutup, atau halaman dimuat ulang.',
+    answer: 'State permainan aktif tetap berada di memori browser. Jika pemain masuk, hasil akhir game solo disimpan untuk riwayat dan peringkat; posisi permainan tidak dipulihkan setelah refresh.',
   },
   {
     question: 'Mengapa room tidak dapat ditemukan?',
@@ -60,7 +60,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Apakah situs memakai cookie?',
-    answer: 'Aplikasi inti tidak membuat cookie akun. Penyedia iklan atau layanan pihak ketiga dapat memakai cookie sesuai kebijakan mereka.',
+    answer: 'Jika pemain masuk, Ruang Main memakai cookie sesi yang aman. Penyedia iklan atau layanan pihak ketiga juga dapat memakai cookie sesuai kebijakan dan persetujuan pengguna.',
   },
   {
     question: 'Bagaimana melaporkan masalah?',
@@ -71,21 +71,21 @@ export const faqItems: FaqItem[] = [
 export const publicPages: Record<PublicPageSlug, PublicPage> = {
   tentang: {
     title: 'Game di Ruang Main',
-    description: 'Ruang Main adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi dan akun.',
+    description: 'Ruang Main adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi. Akun bersifat opsional.',
     sections: [
       {
         heading: 'Solo atau bersama teman',
         paragraphs: [
-          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle dan Fruit Merge adalah game solo dengan progres yang hanya bertahan selama sesi.',
-          'Setiap game di Ruang Main dirancang untuk sesi singkat bersama teman, tanpa registrasi dan tanpa progres akun permanen.',
+          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle dan Fruit Merge adalah game solo dengan riwayat hasil dan peringkat opsional.',
+          'Setiap game tetap dapat dibuka tanpa registrasi. Akun hanya diperlukan jika pemain ingin mencatat hasil solo.',
         ],
       },
       {
         heading: 'Prinsip produk',
         paragraphs: ['Fokus kami adalah permainan yang mudah dibuka, transparan tentang data, dan tetap nyaman digunakan di desktop maupun mobile.'],
         bullets: [
-          'Tanpa registrasi atau profil permanen',
-          'State permainan sementara',
+          'Akun opsional untuk game solo',
+          'State permainan aktif tetap sementara',
           'Komunikasi game multipemain melalui WebRTC',
           'Aturan dan angka permainan dijelaskan di antarmuka',
         ],
@@ -163,8 +163,15 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
       {
         heading: 'Data permainan',
         paragraphs: [
-          'Ruang Main tidak menyediakan akun, database pemain, atau penyimpanan permainan permanen. Nama pemain, state game, dan kode room diproses selama sesi berjalan.',
-          'State resmi berada di memori browser host dan dikirim kepada pemain lain melalui koneksi WebRTC. Data sesi hilang ketika permainan berakhir.',
+          'Pemain dapat membuat akun menggunakan email dan password atau masuk melalui Google. Akun menyimpan nama, email, gambar profil bila tersedia, sesi login, dan hasil akhir game solo.',
+          'State room multiplayer tetap berada di memori browser host dan dikirim kepada pemain lain melalui WebRTC. Posisi permainan aktif tidak disimpan dan hilang ketika sesi berakhir.',
+        ],
+      },
+      {
+        heading: 'Akun dan riwayat solo',
+        paragraphs: [
+          'Riwayat solo mencatat game, skor, level, durasi, statistik hasil, dan waktu bermain. Data dipakai untuk menampilkan riwayat pribadi serta peringkat publik.',
+          'Pemain dapat meminta penghapusan akun dan riwayat melalui halaman Kontak.',
         ],
       },
       {
@@ -178,7 +185,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
         heading: 'Iklan dan cookie',
         paragraphs: [
           'Situs dapat menampilkan iklan dari Google AdSense. Google dan mitranya dapat memakai cookie atau teknologi serupa untuk menayangkan, membatasi frekuensi, mengukur, dan mempersonalisasi iklan sesuai persetujuan serta hukum yang berlaku.',
-          'Pengguna dapat mengelola preferensi iklan melalui pengaturan Google dan pengaturan cookie pada browser. Aplikasi inti Ruang Main tidak membutuhkan cookie akun untuk menjalankan game.',
+          'Pengguna dapat mengelola preferensi iklan melalui pengaturan Google dan pengaturan cookie pada browser. Cookie sesi akun hanya digunakan ketika pemain memilih masuk.',
         ],
       },
       {

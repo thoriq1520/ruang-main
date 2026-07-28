@@ -196,11 +196,10 @@ export class FruitMergeGame {
   private updateDanger(seconds: number) {
     const crowded = this.fruits.some((fruit) => {
       const radius = fruitSpecs[fruit.kind].radius
-      const calm = Math.hypot(fruit.vx, fruit.vy) < 42
-      return fruit.age > .7 && calm && fruit.y - radius < FRUIT_DANGER_Y
+      return fruit.age > .7 && fruit.y - radius < FRUIT_DANGER_Y
     })
     this.dangerProgress = clamp(this.dangerProgress + (crowded ? seconds : -seconds * 1.8), 0, 1.4)
-    if (this.dangerProgress >= 1.4) this.status = 'over'
+    if (this.dangerProgress >= .75) this.status = 'over'
   }
 
   private randomKind() {

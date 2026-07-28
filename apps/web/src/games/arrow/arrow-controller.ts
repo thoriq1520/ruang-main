@@ -2,13 +2,28 @@ import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './arrow-game'
 import {arrowGameScreen} from './arrow-view'
+import {submitSoloRun} from '../../api/client'
 
 export function createArrowController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: ArrowGameState | null = null
+  let startedAt = 0
+  let submitted = false
+
+  const startLevel = (level = 1) => {
+    game = createArrowGame(level)
+    startedAt = performance.now()
+    submitted = false
+  }
+
+  const submitResult = (state: ArrowGameState) => {
+    if (submitted || state.status === 'playing') return
+    submitted = true
+    void submitSoloRun({gameId: 'arrow-puzzle', result: state.status, level: state.level, moves: state.moves, mistakes: state.mistakes, durationMs: Math.round(performance.now() - startedAt)})
+  }
 
   const render = () => {
     if (!game) return start()
-    updateDocumentMeta('Main Arrow Puzzle Gratis | Ruang Main', 'Main Arrow Puzzle gratis langsung dari browser tanpa akun. Progres hanya tersimpan selama tab terbuka.', '/game/arrow-puzzle')
+    updateDocumentMeta('Main Arrow Puzzle Gratis | Ruang Main', 'Main Arrow Puzzle gratis langsung dari browser. Masuk secara opsional untuk mencatat hasil dan peringkat.', '/game/arrow-puzzle')
     root.innerHTML = arrowGameScreen(game)
     bindLeaveButtons()
 
@@ -33,6 +48,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
       window.setTimeout(() => {
         if (!game) return
         game = releaseArrow(game, id)
+        submitResult(game)
         render()
       }, reducedMotion() ? 0 : 500)
     }
@@ -52,18 +68,18 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     })
     root.querySelectorAll('[data-restart-arrow]').forEach((button) => button.addEventListener('click', () => {
       if (!game) return
-      game = createArrowGame(game.level)
+      startLevel(game.level)
       render()
     }))
     root.querySelector('#next-arrow-level')?.addEventListener('click', () => {
       if (!game) return
-      game = createArrowGame(game.level + 1)
+      startLevel(game.level + 1)
       render()
     })
   }
 
   const start = () => {
-    game = createArrowGame()
+    startLevel()
     render()
   }
 
@@ -71,7 +87,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     get active() { return game !== null },
     start,
     render,
-    reset() { game = null },
+    reset() { game = null; submitted = false },
   }
 }
 

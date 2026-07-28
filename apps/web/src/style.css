@@ -2623,6 +2623,245 @@ button:disabled {
   background: var(--color-surface);
 }
 
+.public-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-text-button,
+.header-account-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.header-text-button {
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+.header-account-button {
+  color: var(--color-ink);
+  border-color: var(--color-border-dark);
+  background: var(--color-primary);
+}
+
+.account-dialog {
+  position: relative;
+  width: min(calc(100% - 32px), 560px);
+}
+
+#ranking-dialog {
+  width: min(calc(100% - 32px), 760px);
+}
+
+.account-dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #ad9f85;
+  border-radius: 50%;
+  color: var(--color-ink);
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.account-dialog .step-label {
+  margin: 0 48px 8px 0;
+  color: #846014;
+}
+
+.account-dialog .muted {
+  color: #526159;
+  line-height: 1.55;
+}
+
+.account-choice {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.google-auth-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #aa9f89;
+  border-radius: var(--radius-small);
+  color: var(--color-ink);
+  background: #fffdf7;
+  font-weight: 900;
+}
+
+.google-auth-button svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.account-back {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  color: #67592f;
+  background: transparent;
+  font-weight: 800;
+}
+
+.account-form {
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.account-form label {
+  display: grid;
+  gap: 6px;
+  color: #405047;
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.account-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #aa9f89;
+  border-radius: var(--radius-small);
+  color: var(--color-ink);
+  background: #fffdf7;
+}
+
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-identity > img,
+.account-identity > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--color-border-dark);
+  border-radius: 50%;
+  color: var(--color-ink);
+  background: var(--color-primary);
+  font-weight: 900;
+  object-fit: cover;
+}
+
+.account-identity h2,
+.account-identity p {
+  margin: 0;
+}
+
+.account-identity p {
+  margin-top: 3px;
+  color: #617067;
+  font-size: .85rem;
+}
+
+.history-heading {
+  margin: 28px 0 10px;
+  padding-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #c5baa4;
+}
+
+.history-heading h3,
+.history-heading span {
+  margin: 0;
+}
+
+.history-heading span {
+  color: #617067;
+  font-size: .75rem;
+}
+
+.account-history {
+  max-height: 280px;
+  margin-bottom: 18px;
+  overflow: auto;
+}
+
+.history-row,
+.ranking-row {
+  padding: 10px 0;
+  display: grid;
+  align-items: center;
+  border-bottom: 1px solid #d7cdb8;
+}
+
+.history-row {
+  grid-template-columns: 1fr auto;
+}
+
+.history-row div {
+  display: grid;
+  gap: 2px;
+}
+
+.history-row span {
+  color: #68776e;
+  font-size: .72rem;
+}
+
+.ranking-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.ranking-list h3 {
+  margin: 0 0 12px;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  font-size: 1.25rem;
+}
+
+.ranking-row {
+  grid-template-columns: 30px 1fr auto;
+  gap: 8px;
+}
+
+.ranking-row span {
+  color: #80611d;
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .public-header {
+    flex-wrap: wrap;
+    padding-block: 8px;
+  }
+
+  .public-nav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .ranking-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .public-shell {
   width: min(100% - 32px, 1180px);
   margin-inline: auto;

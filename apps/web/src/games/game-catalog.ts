@@ -107,8 +107,8 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
       {
         heading: 'Level terus berubah',
-        paragraphs: ['Pola dihasilkan untuk memberi susunan dan tingkat kesulitan yang berbeda. Progres kembali ke awal setelah halaman dimuat ulang.'],
-        bullets: ['Permainan solo', 'Tanpa login', 'Level sementara', 'Dapat dimainkan di desktop dan mobile'],
+        paragraphs: ['Pola dihasilkan untuk memberi susunan dan tingkat kesulitan yang berbeda. Posisi level kembali ke awal setelah halaman dimuat ulang, sedangkan hasil dapat dicatat dengan akun opsional.'],
+        bullets: ['Permainan solo', 'Login opsional', 'Riwayat dan peringkat', 'Dapat dimainkan di desktop dan mobile'],
       },
     ],
   },
@@ -130,8 +130,8 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
       {
         heading: 'Tumpukan tidak boleh melewati batas',
-        paragraphs: ['Permainan selesai jika buah yang sudah tenang bertahan di atas garis batas. Progres kembali kosong setelah halaman dimuat ulang.'],
-        bullets: ['Permainan solo', 'Physics berjalan langsung di browser', 'Tanpa login', 'Tidak ada penyimpanan progres'],
+        paragraphs: ['Permainan selesai jika buah yang sudah tenang bertahan di atas garis batas. Posisi permainan tidak dipulihkan setelah refresh, tetapi skor dapat dicatat dengan akun opsional.'],
+        bullets: ['Permainan solo', 'Physics berjalan langsung di browser', 'Login opsional', 'Riwayat dan peringkat'],
       },
     ],
   },
