@@ -2871,11 +2871,11 @@ button:disabled {
   padding: clamp(44px, 7vw, 84px) 0;
 }
 
-.ad-slot:empty {
+.ad-slot:not(:has(.adsbygoogle[data-ad-status="filled"])) {
   display: none;
 }
 
-.ad-slot:not(:empty) {
+.ad-slot:has(.adsbygoogle[data-ad-status="filled"]) {
   min-height: 90px;
   margin: 0 0 32px;
   display: grid;

@@ -1,6 +1,7 @@
 import './style.css'
 import './app/home.css'
 import './games/fruit/fruit.css'
+import './app/redesign.css'
 import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
   addPlayer,

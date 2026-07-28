@@ -60,7 +60,7 @@ export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot =
         return status(503, apiResponse(503, 'Database tidak dapat dijangkau.', null, 'DATABASE_UNAVAILABLE'))
       }
     })
-    .all('/api/auth/*', ({request}) => auth.handler(request))
+    .mount(auth.handler)
     .group('/api', (api) => api
       .get('/me', async ({request, status}) => {
         const session = await auth.api.getSession({headers: request.headers})

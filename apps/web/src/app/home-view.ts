@@ -12,16 +12,14 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
       ${publicHeader()}
       <main id="main-content" class="home-stage">
         <header class="home-intro">
-          <div><h1>Mau main apa?</h1><p>Lima game langsung dari browser. Main bebas tanpa akun, atau masuk untuk mencatat hasil solo.</p></div>
-          <p class="home-session-note"><strong>${gameCatalog.length} game</strong><span>Room multiplayer tetap privat dan peer to peer.</span></p>
+          <div><p class="home-kicker">Koleksi Ruang Main</p><h1>Pilih game seru.</h1><p>Main solo atau buat room privat bersama teman, langsung dari browser.</p></div>
         </header>
         <section class="game-library" aria-labelledby="library-title">
-          <div class="library-heading"><h2 id="library-title">Pilih game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
+          <div class="library-heading"><h2 id="library-title">Semua game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
           <div class="game-shelf" aria-label="Koleksi game Ruang Main">${gameCatalog.map((item) => gameCard(item, item.id === selectedGameId)).join('')}</div>
         </section>
         <section class="play-dock" id="selected-game" aria-labelledby="join-title">
           <div class="play-summary">
-            <span class="play-number" aria-hidden="true">${String(gameCatalog.findIndex((item) => item.id === selectedGameId) + 1).padStart(2, '0')}</span>
             <div><p>${isSolo ? 'Main sendiri' : 'Main bareng'}</p><h2 id="join-title">${selectedGame.name}</h2><p>${selectedGame.description}</p>${notice ? `<p class="notice" role="alert">${escapeHtml(notice)}</p>` : ''}</div>
           </div>
           ${isSolo ? `
