@@ -1,7 +1,7 @@
 import {treaty} from '@elysiajs/eden'
 import type {App} from '@ruang-main/api'
 
-export const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '')
+export const apiOrigin = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : location.origin)).replace(/\/$/, '')
 export const api = treaty<App>(apiOrigin, {fetch: {credentials: 'include'}})
 
 export type SoloRunSubmission = {

@@ -7,7 +7,7 @@ Monorepo mini game browser Ruang Main. Kota Raya, Ular Tangga, dan Ludo tetap be
 ```text
 apps/
   web/       Vite + TypeScript + seluruh game
-  api/       Elysia + Better Auth + history/leaderboard
+  api/       Elysia + Better Auth + history/leaderboard (Bun lokal + Worker production)
 supabase/
   migrations/
 ```
@@ -23,22 +23,23 @@ npm run dev:web
 
 Salin `.env.example` menjadi `.env`. Gunakan connection string **Supavisor Session pooler** untuk `DATABASE_URL`; endpoint Direct IPv6 tidak selalu dapat dijangkau dari mesin lokal atau platform deployment.
 
-Variabel production yang wajib:
+Production berjalan dalam satu domain: asset web dilayani langsung oleh Cloudflare dan route `/api/*` diproses entrypoint `apps/api/src/worker.ts`.
+
+Tambahkan berikut sebagai **runtime secrets** Worker setelah deployment pertama:
 
 ```env
 DATABASE_URL=
 BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=https://api.ruangmain.web.id
-WEB_ORIGIN=https://ruangmain.web.id
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-VITE_API_URL=https://api.ruangmain.web.id
 ```
+
+`BETTER_AUTH_URL` dan `WEB_ORIGIN` sudah menjadi konfigurasi publik di `wrangler.jsonc`. `VITE_API_URL` tidak diperlukan di production karena browser memanggil API pada domain yang sama. `DATABASE_URL` dapat diganti binding `HYPERDRIVE` tanpa perubahan kode.
 
 Google OAuth memakai callback:
 
 ```text
-https://api.ruangmain.web.id/api/auth/callback/google
+https://ruangmain.web.id/api/auth/callback/google
 ```
 
 Tanpa credential Google, tombol Google otomatis disembunyikan. Login email/password tetap tersedia. Email verification dan reset password memerlukan provider email sebelum fitur recovery diaktifkan.
@@ -49,6 +50,7 @@ Tanpa credential Google, tombol Google otomatis disembunyikan. Login email/passw
 npm test
 npm run build
 npm run build:api
+npm run build:worker
 npm run self-test
 ```
 
@@ -57,5 +59,6 @@ npm run self-test
 ## Deployment
 
 - Cloudflare menjalankan `npm run build` lalu `npx wrangler deploy` dari root repository.
-- API dijalankan pada host Bun/container dengan entrypoint `apps/api/src/index.ts`.
-- Supabase hanya diakses oleh API; browser tidak menerima password atau connection string database.
+- Static assets dan Elysia API dikirim sebagai satu Worker; local development tetap memakai entrypoint Bun `apps/api/src/index.ts`.
+- Supabase hanya diakses oleh Worker. Untuk trafik production, binding Hyperdrive lebih disarankan daripada koneksi langsung `DATABASE_URL`.
+- Setelah Worker script pertama terpasang, isi runtime secrets melalui **Settings → Variables and secrets**. Nilai rahasia tidak disimpan di Git.

@@ -1,9 +1,10 @@
-import {app} from './app'
+import {createApp} from './app'
 import {config} from './config'
 import {migrateDatabase} from './db/migrate'
 import {closePool, getPool} from './db/pool'
 
 const email = `self-test-${Date.now()}@ruangmain.invalid`
+const app = createApp()
 
 function request(path: string, init?: RequestInit) {
   const headers = new Headers(init?.headers)

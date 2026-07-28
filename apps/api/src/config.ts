@@ -4,7 +4,7 @@ function required(name: string) {
   return value
 }
 
-const production = process.env.NODE_ENV === 'production'
+const production = process.env.ENVIRONMENT === 'production' || process.env.NODE_ENV === 'production'
 const webOrigins = (process.env.WEB_ORIGIN?.trim() || (production ? 'https://ruangmain.web.id' : 'http://localhost:5173'))
   .split(',')
   .map((origin) => origin.trim().replace(/\/$/, ''))
@@ -17,7 +17,7 @@ export function isAllowedWebOrigin(origin: string) {
 export const config = {
   get databaseUrl() { return required('DATABASE_URL') },
   authUrl: process.env.BETTER_AUTH_URL?.trim() || 'http://localhost:3000',
-  authSecret: process.env.BETTER_AUTH_SECRET?.trim() || (process.env.NODE_ENV === 'production' ? required('BETTER_AUTH_SECRET') : 'ruang-main-local-development-secret-only'),
+  get authSecret() { return process.env.BETTER_AUTH_SECRET?.trim() || (production ? required('BETTER_AUTH_SECRET') : 'ruang-main-local-development-secret-only') },
   webOrigin: webOrigins[0],
   webOrigins,
   googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || '',

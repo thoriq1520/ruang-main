@@ -1,6 +1,7 @@
 import {cors} from '@elysiajs/cors'
-import {Elysia, t} from 'elysia'
-import {auth} from './auth'
+import {Elysia, t, type ElysiaAdapter} from 'elysia'
+import type {Pool} from 'pg'
+import {createAuth} from './auth'
 import {config, isAllowedWebOrigin} from './config'
 import {getPool} from './db/pool'
 import {apiResponse} from './response'
@@ -24,8 +25,11 @@ function errorMessage(error: unknown) {
   return cause instanceof Error ? cause.message : String(cause)
 }
 
-export function createApp(repository = new RunRepository(getPool())) {
-  return new Elysia()
+export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot = true) {
+  const auth = createAuth(pool)
+  const repository = new RunRepository(pool)
+
+  return new Elysia({adapter, aot})
     .onRequest(({request}) => {
       requestStartedAt.set(request, performance.now())
     })
@@ -91,5 +95,4 @@ export function createApp(repository = new RunRepository(getPool())) {
     )
 }
 
-export const app = createApp()
-export type App = typeof app
+export type App = ReturnType<typeof createApp>

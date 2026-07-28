@@ -2,17 +2,23 @@
   "name": "ruang-main",
   "private": true,
   "version": "0.2.0",
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "bun run --parallel --filter '@ruang-main/*' dev",
     "dev:web": "vite apps/web",
     "dev:api": "bun --env-file=.env --watch apps/api/src/index.ts",
     "build": "npm run build --workspace @ruang-main/web",
     "build:api": "npm run build --workspace @ruang-main/api",
+    "build:worker": "npm run build && wrangler deploy --dry-run",
     "test": "npm run test:web && npm run test:api",
     "test:web": "npm run test --workspace @ruang-main/web",
     "test:api": "bun --env-file=.env test apps/api/src",
     "db:migrate": "bun --env-file=.env apps/api/src/db/migrate.ts",
     "self-test": "npm test && npm run build && bun --env-file=.env apps/api/src/self-test.ts"
+  },
+  "devDependencies": {
+    "wrangler": "^4.114.0"
   }
 }
