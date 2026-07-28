@@ -21,6 +21,12 @@ export function createAuth(database: Pool = getPool()) {
       enabled: true,
       minPasswordLength: 8,
     },
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ['google'],
+      },
+    },
     socialProviders: google,
     advanced: {
       cookiePrefix: 'ruang-main',

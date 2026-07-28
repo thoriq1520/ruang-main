@@ -2,8 +2,21 @@ import {expect, test} from 'bun:test'
 import {CloudflareAdapter} from 'elysia/adapter/cloudflare-worker'
 import {Pool} from 'pg'
 import {createApp} from './app'
+import {createAuth} from './auth'
 import {config} from './config'
 import worker from './worker'
+
+test('Google menaut ke user yang sudah ada dengan email sama', async () => {
+  const pool = new Pool()
+  const auth = createAuth(pool)
+
+  expect(auth.options.account?.accountLinking).toMatchObject({
+    enabled: true,
+    trustedProviders: ['google'],
+  })
+
+  await pool.end()
+})
 
 test('Worker melayani API dan menjelaskan database yang belum dikonfigurasi', async () => {
   const missingDatabase = await worker.fetch(new Request('https://ruangmain.web.id/health'), {})
