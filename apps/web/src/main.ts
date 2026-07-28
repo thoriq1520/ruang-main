@@ -351,9 +351,22 @@ function renderLudoGame() {
     button.textContent = 'Mengirim lemparan...'
     requestLudoIntent({type: 'LUDO_ROLL'}, ludoGame?.currentPlayerId ?? localPeerId)
   })
-  document.querySelectorAll<HTMLButtonElement>('[data-ludo-token]').forEach((button) => button.addEventListener('click', () => {
-    requestLudoIntent({type: 'LUDO_MOVE', tokenIndex: Number(button.dataset.ludoToken)}, ludoGame?.currentPlayerId ?? localPeerId)
-  }))
+
+  // Auto-move when only one pawn can move
+  if (canChoose && movable.length === 1) {
+    requestLudoIntent({type: 'LUDO_MOVE', tokenIndex: movable[0]}, ludoGame?.currentPlayerId ?? localPeerId)
+    return
+  }
+
+  // Click movable pawns directly on the board
+  document.querySelectorAll<HTMLElement>('.ludo-token.is-movable').forEach((token) => {
+    token.addEventListener('click', () => {
+      const tokenIndex = Number(token.dataset.ludoToken)
+      if (Number.isInteger(tokenIndex)) {
+        requestLudoIntent({type: 'LUDO_MOVE', tokenIndex}, ludoGame?.currentPlayerId ?? localPeerId)
+      }
+    })
+  })
 }
 
 function renderGame() {
@@ -962,38 +975,102 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
   // Normal move without ladder/snake effect
   if (move.landed === move.to) {
     walkPoints[walkPoints.length - 1] = finalTarget
-    animateBoardPiece(selector, walkPoints)
+    const segments = walkPoints.length - 1
+    if (segments < 1) return
+
+    const frames: Keyframe[] = [{
+      offset: 0,
+      transform: `translate3d(${walkPoints[0].x - finalTarget.x}px, ${walkPoints[0].y - finalTarget.y}px, 0) scale(1)`,
+      filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
+    }]
+
+    for (let i = 1; i < walkPoints.length; i++) {
+      const prev = walkPoints[i - 1]
+      const cur = walkPoints[i]
+      // Detect row turn: the cell at position (move.from + i) crosses a multiple of 10
+      const cellPos = move.from + i
+      const isRowTurn = cellPos > 0 && cellPos % 10 === 1 // just entered a new row
+      const stepDist = Math.hypot(cur.x - prev.x, cur.y - prev.y)
+      const hopHeight = isRowTurn ? Math.max(18, stepDist * 0.35) : 14
+      const hopScale = isRowTurn ? 1.2 : 1.1
+
+      frames.push({
+        offset: (i - 0.5) / segments,
+        transform: `translate3d(${(prev.x + cur.x) / 2 - finalTarget.x}px, ${(prev.y + cur.y) / 2 - finalTarget.y - hopHeight}px, 0) scale(${hopScale})`,
+        filter: 'drop-shadow(0 10px 5px rgba(0,0,0,.38))',
+      })
+      frames.push({
+        offset: i / segments,
+        transform: `translate3d(${cur.x - finalTarget.x}px, ${cur.y - finalTarget.y}px, 0) scale(1)`,
+        filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
+      })
+    }
+
+    piece.classList.add('is-board-moving')
+    const animation = piece.animate(frames, {
+      duration: Math.max(400, segments * 180),
+      easing: 'linear',
+      fill: 'both',
+    })
+    const cleanUp = () => {
+      animation.cancel()
+      piece.classList.remove('is-board-moving')
+    }
+    void animation.finished.then(cleanUp, cleanUp)
     return
   }
 
-  // Ladder or Snake move: Unified single-timeline animation so no snapping/flashing occurs!
+  // Immediately pin the pion at its visual origin to prevent the flash.
+  // After render(), the DOM element is already at move.to (the ladder destination),
+  // so without this pin, the pion would flash at the top of the ladder for one frame.
+  const startPoint = walkPoints[0]
+  piece.style.transform = `translate3d(${startPoint.x - finalTarget.x}px, ${startPoint.y - finalTarget.y}px, 0)`
+  piece.classList.add('is-board-moving')
+
+  // Use rAF to ensure the inline style above paints before starting the Web Animation
+  requestAnimationFrame(() => {
+    // Clear the inline pin — the Web Animation will take over
+    piece.style.transform = ''
+    runSnakesTimeline(piece, finalTarget, move, walkPoints)
+  })
+}
+
+function runSnakesTimeline(
+  piece: HTMLElement,
+  finalTarget: ScreenPoint,
+  move: SnakeMove,
+  walkPoints: ScreenPoint[]
+) {
   const landedPoint = snakeCellPoint(move.landed) ?? walkPoints[walkPoints.length - 1]
-  const destinationPoint = finalTarget
 
   const walkSteps = Math.max(1, walkPoints.length - 1)
-  const walkTime = walkSteps * 160
-  const pauseTime = 280
+  const walkTime = walkSteps * 180 // slightly slower per step for clarity
 
-  const dx = destinationPoint.x - landedPoint.x
-  const dy = destinationPoint.y - landedPoint.y
+  const dx = finalTarget.x - landedPoint.x
+  const dy = finalTarget.y - landedPoint.y
   const distance = Math.hypot(dx, dy)
-  const climbTime = move.effect === 'ladder'
-    ? Math.min(1200, Math.max(700, Math.floor(distance * 2.2)))
-    : Math.min(1200, Math.max(750, Math.floor(distance * 2.4)))
 
-  const totalTime = walkTime + pauseTime + climbTime
+  // Ladder climbs slower than snake slides for a visible "climbing" feel
+  const effectTime = move.effect === 'ladder'
+    ? Math.min(1800, Math.max(800, Math.floor(distance * 3)))
+    : Math.min(1400, Math.max(750, Math.floor(distance * 2.4)))
 
-  const walkFraction = walkTime / totalTime
-  const pauseFraction = (walkTime + pauseTime) / totalTime
+  const pauseTime = 320
+  const totalTime = walkTime + pauseTime + effectTime
+
+  const walkEnd = walkTime / totalTime
+  const pauseEnd = (walkTime + pauseTime) / totalTime
+  const effectSpan = 1.0 - pauseEnd
 
   const frames: Keyframe[] = []
 
-  // Phase 1: Walk to base of ladder / head of snake
+  // ── Phase 1: Walk step-by-step to the ladder base / snake head ──
   for (let index = 0; index < walkPoints.length; index++) {
     const point = walkPoints[index]
-    const stepProgress = index / walkSteps
-    const offset = stepProgress * walkFraction
+    const progress = index / walkSteps
+    const offset = progress * walkEnd
 
+    // Insert a mid-air hop keyframe between each pair of cells
     if (index > 0) {
       const prev = walkPoints[index - 1]
       const currentPos = move.from + index - 1
@@ -1003,13 +1080,10 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
         const row = Math.floor((currentPos - 1) / 10)
         arcX = row % 2 === 0 ? 20 : -20
       }
-      const midX = (prev.x + point.x) / 2 + arcX - finalTarget.x
-      const midY = (prev.y + point.y) / 2 - 14 - finalTarget.y
-      const midOffset = ((index - 0.5) / walkSteps) * walkFraction
-
+      const midOffset = ((index - 0.5) / walkSteps) * walkEnd
       frames.push({
         offset: midOffset,
-        transform: `translate3d(${midX}px, ${midY}px, 0) scale(${isRowTurn ? 1.2 : 1.12})`,
+        transform: `translate3d(${(prev.x + point.x) / 2 + arcX - finalTarget.x}px, ${(prev.y + point.y) / 2 - 14 - finalTarget.y}px, 0) scale(${isRowTurn ? 1.2 : 1.12})`,
         filter: 'drop-shadow(0 10px 5px rgba(0,0,0,.38))',
       })
     }
@@ -1021,56 +1095,60 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
     })
   }
 
-  // Trigger Toast right as pawn lands on the ladder/snake tile
+  // Show toast when pawn arrives at the effect tile
   window.setTimeout(() => {
     if (move.effect === 'ladder') showToast(`Naik tangga ke ${move.to}! 🪜`)
     else if (move.effect === 'snake') showToast(`Terpeleset ular! Turun ke ${move.to} 🐍`)
-  }, walkTime + 20)
+  }, walkTime + 40)
 
-  // Phase 2: Pause at landed cell with an eager pulse
+  // ── Phase 2: Brief anticipation pause at the effect tile ──
+  const lx = landedPoint.x - finalTarget.x
+  const ly = landedPoint.y - finalTarget.y
   frames.push({
-    offset: walkFraction + (pauseFraction - walkFraction) * 0.5,
-    transform: `translate3d(${landedPoint.x - finalTarget.x}px, ${landedPoint.y - finalTarget.y - 6}px, 0) scale(1.18) rotate(${move.effect === 'snake' ? '-10deg' : '4deg'})`,
+    offset: walkEnd + (pauseEnd - walkEnd) * 0.5,
+    transform: `translate3d(${lx}px, ${ly - 6}px, 0) scale(1.18) rotate(${move.effect === 'snake' ? '-10deg' : '4deg'})`,
     filter: 'drop-shadow(0 8px 4px rgba(0,0,0,.4))',
   })
   frames.push({
-    offset: pauseFraction,
-    transform: `translate3d(${landedPoint.x - finalTarget.x}px, ${landedPoint.y - finalTarget.y}px, 0) scale(1)`,
+    offset: pauseEnd,
+    transform: `translate3d(${lx}px, ${ly}px, 0) scale(1)`,
     filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
   })
 
-  // Phase 3: Ladder Climb or Snake Slide
-  const effectSpan = 1.0 - pauseFraction
-
+  // ── Phase 3: Climb the ladder or slide down the snake ──
   if (move.effect === 'ladder') {
-    const climbSteps = Math.max(4, Math.floor(distance / 40))
+    // Use many small steps to make climbing visually clear
+    const climbSteps = Math.max(6, Math.floor(distance / 30))
     for (let step = 1; step <= climbSteps; step++) {
-      const stepProg = step / climbSteps
-      const offset = pauseFraction + stepProg * effectSpan
-      const px = landedPoint.x + dx * stepProg - finalTarget.x
-      const py = landedPoint.y + dy * stepProg - finalTarget.y
-      const isStepMid = step < climbSteps && step % 2 === 1
-      const lift = isStepMid ? -12 : 0
-      const scale = isStepMid ? 1.2 : 1.06
-      const rot = isStepMid ? 6 : -4
+      const t = step / climbSteps
+      const offset = pauseEnd + t * effectSpan
+      const px = landedPoint.x + dx * t - finalTarget.x
+      const py = landedPoint.y + dy * t - finalTarget.y
+      const isOdd = step % 2 === 1
+      const lift = isOdd && step < climbSteps ? -14 : 0
+      const tilt = isOdd && step < climbSteps ? 7 : -4
+      const scale = isOdd && step < climbSteps ? 1.22 : 1.06
 
       frames.push({
         offset,
-        transform: `translate3d(${px}px, ${py + lift}px, 0) scale(${scale}) rotate(${rot}deg)`,
-        filter: isStepMid ? 'drop-shadow(0 14px 7px rgba(0,0,0,.45))' : 'drop-shadow(0 4px 2px rgba(0,0,0,.48))',
+        transform: `translate3d(${px}px, ${py + lift}px, 0) scale(${scale}) rotate(${tilt}deg)`,
+        filter: isOdd && step < climbSteps
+          ? 'drop-shadow(0 16px 8px rgba(0,0,0,.45))'
+          : 'drop-shadow(0 4px 2px rgba(0,0,0,.48))',
       })
     }
   } else {
-    const slideSteps = 10
+    // Snake: wave pattern
+    const slideSteps = 12
     const nx = -dy / (distance || 1)
     const ny = dx / (distance || 1)
     for (let step = 1; step <= slideSteps; step++) {
-      const stepProg = step / slideSteps
-      const offset = pauseFraction + stepProg * effectSpan
-      const wave = Math.sin(stepProg * Math.PI * 2) * 26
-      const px = landedPoint.x + dx * stepProg + nx * wave - finalTarget.x
-      const py = landedPoint.y + dy * stepProg + ny * wave - finalTarget.y
-      const angle = Math.cos(stepProg * Math.PI * 2) * 16
+      const t = step / slideSteps
+      const offset = pauseEnd + t * effectSpan
+      const wave = Math.sin(t * Math.PI * 2.5) * 28
+      const px = landedPoint.x + dx * t + nx * wave - finalTarget.x
+      const py = landedPoint.y + dy * t + ny * wave - finalTarget.y
+      const angle = Math.cos(t * Math.PI * 2.5) * 18
 
       frames.push({
         offset,
@@ -1080,14 +1158,13 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
     }
   }
 
-  // Land cleanly on target tile
+  // Final keyframe: land cleanly at target cell
   frames[frames.length - 1] = {
     offset: 1,
     transform: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
     filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
   }
 
-  piece.classList.add('is-board-moving')
   const animation = piece.animate(frames, {
     duration: totalTime,
     easing: 'linear',

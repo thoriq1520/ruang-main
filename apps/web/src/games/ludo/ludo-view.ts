@@ -8,6 +8,9 @@ const baseTokenCells: Record<LudoColor, readonly (readonly [number, number])[]> 
   yellow: [[10, 1], [10, 4], [13, 1], [13, 4]],
 }
 
+const startSafeIndices = [0, 13, 26, 39] as const
+const extraSafeIndices = [8, 21, 34, 47] as const
+
 export function ludoLobbyScreen(state: LudoState | null, roomCode: string, host: boolean, localPeerId: string) {
   const players = state?.players ?? []
   const local = players.find((player) => player.id === localPeerId)
@@ -46,7 +49,7 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
       <aside class="ludo-side-panel">
         <div><p class="game-panel-label">Permainan</p><h1>Ludo</h1><p>Keluarkan pion dengan angka enam. Bawa keempat pion tepat ke rumah untuk menang.</p></div>
         <div class="ludo-turn-card ${current?.color ? `color-${current.color}` : ''}"><span>Giliran sekarang</span><strong>${escapeHtml(current?.name ?? winner?.name ?? 'Selesai')}</strong><div class="single-die dice-row" role="status" aria-live="polite">${dieView(state.lastRoll, 0, animateDice)}</div>
-          ${state.pendingRoll !== null && canChoose ? `<p>Pilih pion untuk bergerak ${state.pendingRoll} langkah.</p><div class="ludo-token-choices">${movableTokens.map((index) => `<button type="button" data-ludo-token="${index}"><i aria-hidden="true"></i>Pion ${index + 1}</button>`).join('')}</div>` : `<button class="button button-primary" id="roll-ludo" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : state.pendingRoll !== null ? 'Memilih pion...' : 'Menunggu giliran'}</button>`}
+          ${state.pendingRoll !== null && canChoose ? `<p>Ketuk pion di papan untuk bergerak ${state.pendingRoll} langkah.</p>` : `<button class="button button-primary" id="roll-ludo" type="button" ${canRoll ? '' : 'disabled'}>${canRoll ? 'Lempar dadu' : state.pendingRoll !== null ? 'Memilih pion...' : 'Menunggu giliran'}</button>`}
         </div>
         <div class="ludo-player-list">${state.players.map((player) => `<div class="${player.id === state.currentPlayerId ? 'is-current' : ''}"><span class="ludo-player-mark color-${player.color}">${initial(player.name)}</span><p><strong>${escapeHtml(player.name)}</strong><small>${player.tokens.filter((token) => token === 57).length}/4 pion pulang</small></p></div>`).join('')}</div>
         <ol class="snakes-log">${state.log.slice(-4).reverse().map((entry) => `<li>${escapeHtml(entry)}</li>`).join('')}</ol>
@@ -54,21 +57,33 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
       <section class="ludo-board-wrap" aria-label="Papan Ludo">
         <div class="ludo-board">
           ${ludoColors.map((color) => `<div class="ludo-base color-${color}"><div></div><i></i><i></i><i></i><i></i></div>`).join('')}
-          ${ludoTrackCells.map(([row, column], index) => `<div class="ludo-cell ludo-track ${[0, 13, 26, 39].includes(index) ? `is-safe color-${ludoColors[[0, 13, 26, 39].indexOf(index)]}` : ''}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true"></div>`).join('')}
+          ${ludoTrackCells.map(([row, column], index) => {
+            const startColorIndex = startSafeIndices.indexOf(index as any)
+            const isStart = startColorIndex !== -1
+            const isExtra = extraSafeIndices.includes(index as any)
+            const colorClass = isStart ? `color-${ludoColors[startColorIndex]}` : ''
+            const safeClass = isStart ? `is-safe is-start-safe ${colorClass}` : isExtra ? 'is-safe is-star-safe' : ''
+            const badge = isStart
+              ? '<span class="ludo-safe-mark circle" aria-hidden="true"></span>'
+              : isExtra
+                ? '<span class="ludo-safe-mark star" aria-hidden="true">★</span>'
+                : ''
+            return `<div class="ludo-cell ludo-track ${safeClass}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true">${badge}</div>`
+          }).join('')}
           ${ludoColors.flatMap((color) => ludoHomeCells[color].map(([row, column]) => `<div class="ludo-cell ludo-home color-${color}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true"></div>`)).join('')}
           <div class="ludo-center" aria-label="Rumah akhir"></div>
-          ${state.players.flatMap((player) => player.tokens.map((progress, tokenIndex) => tokenView(player.id, player.color!, progress, tokenIndex, player.name))).join('')}
+          ${state.players.flatMap((player) => player.tokens.map((progress, tokenIndex) => tokenView(player.id, player.color!, progress, tokenIndex, player.name, player.id === state.currentPlayerId && movableTokens.includes(tokenIndex)))).join('')}
         </div>
       </section>
       ${state.phase === 'finished' ? `<section class="snakes-result" role="dialog" aria-modal="true"><p class="eyebrow">PERMAINAN SELESAI</p><h2>${escapeHtml(winner?.name ?? 'Pemain')} menang!</h2><p>Keempat pion berhasil tiba di rumah.</p><button class="button button-primary" type="button" data-leave>Kembali ke beranda</button></section>` : ''}
     </main>`
 }
 
-function tokenView(playerId: string, color: LudoColor, progress: number, tokenIndex: number, name: string) {
+function tokenView(playerId: string, color: LudoColor, progress: number, tokenIndex: number, name: string, isMovable = false) {
   const [row, column] = progress === -1
     ? baseTokenCells[color][tokenIndex]
     : progress <= 51
       ? ludoTrackCells[globalTrackIndex(color, progress)]
       : ludoHomeCells[color][progress - 52]
-  return `<span class="ludo-token color-${color}" data-ludo-player="${escapeHtml(playerId)}" data-ludo-token="${tokenIndex}" style="--row:${row + 1};--column:${column + 1};--token-offset:${tokenIndex}" title="${escapeHtml(name)}, pion ${tokenIndex + 1}" aria-label="${escapeHtml(name)}, pion ${tokenIndex + 1}"><i></i></span>`
+  return `<span class="ludo-token color-${color} ${isMovable ? 'is-movable' : ''}" data-ludo-player="${escapeHtml(playerId)}" data-ludo-token="${tokenIndex}" style="--row:${row + 1};--column:${column + 1};--token-offset:${tokenIndex}" title="${escapeHtml(name)}, pion ${tokenIndex + 1}" aria-label="${escapeHtml(name)}, pion ${tokenIndex + 1}"><i></i></span>`
 }

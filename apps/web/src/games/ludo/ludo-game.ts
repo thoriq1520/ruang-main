@@ -46,7 +46,7 @@ export const ludoHomeCells: Record<LudoColor, readonly (readonly [number, number
 }
 
 const colorOffsets: Record<LudoColor, number> = {red: 0, blue: 13, green: 26, yellow: 39}
-const safeTrackCells = new Set(Object.values(colorOffsets))
+const safeTrackCells = new Set([0, 8, 13, 21, 26, 34, 39, 47])
 
 export function createLudoLobby(hostId: string, hostName: string): LudoState {
   return {gameId: 'ludo', phase: 'lobby', sequence: 0, hostId, players: [player(hostId, hostName)], currentPlayerId: null, pendingRoll: null, lastRoll: null, lastRollSequence: -1, lastMove: null, winnerId: null, log: []}
@@ -88,8 +88,26 @@ export function startLudo(state: LudoState, requesterId: string): LudoState {
 
 export function movableLudoTokens(state: LudoState, playerId: string, roll = state.pendingRoll) {
   const current = state.players.find((item) => item.id === playerId)
-  if (!current || roll === null) return []
-  return current.tokens.flatMap((progress, index) => progress === -1 ? (roll === 6 ? [index] : []) : progress < 57 && progress + roll <= 57 ? [index] : [])
+  if (!current || roll === null || !current.color) return []
+  return current.tokens.flatMap((progress, index) => {
+    if (progress === -1) {
+      if (roll !== 6) return []
+      // Exiting base to progress 0 — check if another own pawn is already there
+      const destGlobal = globalTrackIndex(current.color!, 0)
+      if (!safeTrackCells.has(destGlobal) && current.tokens.some((p, i) => i !== index && p >= 0 && p <= 51 && globalTrackIndex(current.color!, p) === destGlobal)) return []
+      return [index]
+    }
+    if (progress >= 57 || progress + roll > 57) return []
+    const to = progress + roll
+    // Block if destination track cell has a friendly pawn (non-safe only)
+    if (to <= 51) {
+      const destGlobal = globalTrackIndex(current.color!, to)
+      if (!safeTrackCells.has(destGlobal) && current.tokens.some((p, i) => i !== index && p >= 0 && p <= 51 && globalTrackIndex(current.color!, p) === destGlobal)) return []
+    }
+    // Block if destination home-stretch cell has a friendly pawn (but not final home 57)
+    if (to > 51 && to < 57 && current.tokens.some((p, i) => i !== index && p === to)) return []
+    return [index]
+  })
 }
 
 export function rollLudo(state: LudoState, requesterId: string, forcedRoll?: number): LudoState {
@@ -130,7 +148,7 @@ export function moveLudoToken(state: LudoState, requesterId: string, tokenIndex:
     phase: winnerId ? 'finished' : 'playing',
     sequence: state.sequence + 1,
     players,
-    currentPlayerId: winnerId ? null : roll === 6 ? requesterId : nextPlayerId(state, requesterId),
+    currentPlayerId: winnerId ? null : (roll === 6 || capturedPlayerId !== undefined) ? requesterId : nextPlayerId(state, requesterId),
     pendingRoll: null,
     lastMove: {sequence: state.sequence + 1, playerId: requesterId, tokenIndex, from, to, capturedPlayerId, capturedTokenIndex},
     winnerId,
