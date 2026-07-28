@@ -25,6 +25,8 @@ export function createAuth(database: Pool = getPool()) {
       accountLinking: {
         enabled: true,
         trustedProviders: ['google'],
+        // ponytail: temporary until real email verification exists.
+        requireLocalEmailVerified: false,
       },
     },
     socialProviders: google,

@@ -13,6 +13,7 @@ test('Google menaut ke user yang sudah ada dengan email sama', async () => {
   expect(auth.options.account?.accountLinking).toMatchObject({
     enabled: true,
     trustedProviders: ['google'],
+    requireLocalEmailVerified: false,
   })
 
   await pool.end()
