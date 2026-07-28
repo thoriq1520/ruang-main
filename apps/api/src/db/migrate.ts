@@ -6,8 +6,10 @@ export async function migrateDatabase() {
   const auth = createAuth()
   const migrations = await getMigrations(auth.options)
   await migrations.runMigrations()
-  const sql = await Bun.file(new URL('../../../../supabase/migrations/202607280001_solo_runs.sql', import.meta.url)).text()
-  await getPool().query(sql)
+  for (const name of ['202607280001_solo_runs.sql', '202607280002_block_blast.sql']) {
+    const sql = await Bun.file(new URL(`../../../../supabase/migrations/${name}`, import.meta.url)).text()
+    await getPool().query(sql)
+  }
 }
 
 if (import.meta.main) {

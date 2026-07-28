@@ -1,7 +1,7 @@
 create table if not exists public.solo_runs (
   id uuid primary key default gen_random_uuid(),
   user_id text not null references public."user"(id) on delete cascade,
-  game_id text not null check (game_id in ('arrow-puzzle', 'fruit-merge')),
+  game_id text not null check (game_id in ('arrow-puzzle', 'fruit-merge', 'block-blast')),
   result text not null check (result in ('won', 'lost')),
   score bigint not null check (score >= 0),
   level integer,

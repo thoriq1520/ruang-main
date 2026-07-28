@@ -8,7 +8,7 @@ import {apiResponse} from './response'
 import {normalizeRun, RunRepository, soloGameIds} from './runs'
 
 const runBody = t.Object({
-  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge')]),
+  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge'), t.Literal('block-blast')]),
   result: t.Union([t.Literal('won'), t.Literal('lost')]),
   durationMs: t.Integer({minimum: 0, maximum: 86_400_000}),
   score: t.Optional(t.Integer()),
@@ -16,6 +16,7 @@ const runBody = t.Object({
   moves: t.Optional(t.Integer()),
   mistakes: t.Optional(t.Integer()),
   largestKind: t.Optional(t.Integer()),
+  linesCleared: t.Optional(t.Integer()),
 })
 
 const requestStartedAt = new WeakMap<Request, number>()

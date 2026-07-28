@@ -4,7 +4,7 @@ export const siteMeta = {
   name: 'Ruang Main',
   alternateName: 'Mini Games Coop',
   title: 'Ruang Main - Mini Game Browser Gratis',
-  description: 'Main Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk riwayat dan peringkat solo.',
+  description: 'Main Block Blast, Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk riwayat dan peringkat solo.',
 } as const
 
 export type FaqItem = {
@@ -36,7 +36,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Game apa yang tersedia?',
-    answer: 'Tersedia Kota Raya, Ular Tangga, Ludo, Arrow Puzzle, dan Fruit Merge. Game dapat dimainkan sendiri atau melalui room privat sesuai modenya.',
+    answer: 'Tersedia Kota Raya, Ular Tangga, Ludo, Arrow Puzzle, Fruit Merge, dan Block Blast. Game dapat dimainkan sendiri atau melalui room privat sesuai modenya.',
   },
   {
     question: 'Apakah Ruang Main gratis?',
@@ -76,7 +76,7 @@ export const publicPages: Record<PublicPageSlug, PublicPage> = {
       {
         heading: 'Solo atau bersama teman',
         paragraphs: [
-          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle dan Fruit Merge adalah game solo dengan riwayat hasil dan peringkat opsional.',
+          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle, Fruit Merge, dan Block Blast adalah game solo dengan riwayat hasil dan peringkat opsional.',
           'Setiap game tetap dapat dibuka tanpa registrasi. Akun hanya diperlukan jika pemain ingin mencatat hasil solo.',
         ],
       },

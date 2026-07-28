@@ -1,6 +1,7 @@
 import './style.css'
 import './app/home.css'
 import './games/fruit/fruit.css'
+import './games/block/block.css'
 import './app/redesign.css'
 import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
@@ -45,6 +46,7 @@ import {gamePageFromPath, publicPageFromPath, renderGameLandingPage, renderPubli
 import {updateDocumentMeta} from './app/seo'
 import {createArrowController} from './games/arrow/arrow-controller'
 import {createFruitController} from './games/fruit/fruit-controller'
+import {createBlockController} from './games/block/block-controller'
 import {homeScreen} from './app/home-view'
 import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
 import {bindAccountUi} from './auth/account-controller'
@@ -61,7 +63,7 @@ let isDemo = false
 const requestedGameId = new URLSearchParams(location.search).get('game')
 let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
@@ -74,6 +76,7 @@ let auctionClock = 0
 let joinTimer = 0
 const arrowController = createArrowController(app, bindLeaveButtons)
 const fruitController = createFruitController(app, bindLeaveButtons)
+const blockController = createBlockController(app, bindLeaveButtons)
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
 if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
@@ -81,7 +84,7 @@ if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.repl
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
 window.addEventListener('popstate', () => {
-  if (!game && !arrowController.active && !fruitController.active && !snakesGame && !ludoGame && view === 'home') render()
+  if (!game && !arrowController.active && !fruitController.active && !blockController.active && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
@@ -104,6 +107,7 @@ function render() {
   else if (view === 'game') renderGame()
   else if (view === 'arrow-game') arrowController.render()
   else if (view === 'fruit-game') fruitController.render()
+  else if (view === 'block-game') blockController.render()
   else if (view === 'snakes-lobby') renderSnakesLobby()
   else if (view === 'snakes-game') renderSnakesGame()
   else if (view === 'ludo-lobby') renderLudoLobby()
@@ -126,7 +130,7 @@ function renderHome() {
   }))
 
   if (isSolo) {
-    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : startArrowGame)
+    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : startArrowGame)
     return
   }
 
@@ -174,6 +178,7 @@ function renderHome() {
 
 function startArrowGame() {
   fruitController.reset()
+  blockController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -186,6 +191,7 @@ function startArrowGame() {
 
 function startFruitGame() {
   arrowController.reset()
+  blockController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -193,6 +199,19 @@ function startFruitGame() {
   homeNotice = ''
   view = 'fruit-game'
   fruitController.start()
+  window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function startBlockGame() {
+  arrowController.reset()
+  fruitController.reset()
+  game = null
+  snakesGame = null
+  ludoGame = null
+  network = null
+  homeNotice = ''
+  view = 'block-game'
+  blockController.start()
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
@@ -511,6 +530,7 @@ function centerActiveCellOnMobile(state: GameState) {
 function startOnline(host: boolean, rawName: string, rawCode: string) {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   if (selectedGameId === 'fruit-merge') return startFruitGame()
+  if (selectedGameId === 'block-blast') return startBlockGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -650,6 +670,7 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
 function openDemo() {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   if (selectedGameId === 'fruit-merge') return startFruitGame()
+  if (selectedGameId === 'block-blast') return startBlockGame()
   activeGameId = selectedGameId
   if (activeGameId === 'ludo') {
     ludoGame = createLudoDemo()
@@ -1148,6 +1169,7 @@ async function leaveToHome(message = '') {
   game = null
   arrowController.reset()
   fruitController.reset()
+  blockController.reset()
   snakesGame = null
   ludoGame = null
   view = 'home'
@@ -1161,7 +1183,7 @@ function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
     button.addEventListener('click', async (event) => {
       event.preventDefault()
-      const message = view === 'arrow-game' || view === 'fruit-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
       if (!isDemo && !await confirmLeave(message)) return
       void leaveToHome()
     }),

@@ -1,6 +1,6 @@
 import type {Pool} from 'pg'
 
-export const soloGameIds = ['arrow-puzzle', 'fruit-merge'] as const
+export const soloGameIds = ['arrow-puzzle', 'fruit-merge', 'block-blast'] as const
 export type SoloGameId = typeof soloGameIds[number]
 export type RunResult = 'won' | 'lost'
 
@@ -13,6 +13,7 @@ export type RunSubmission = {
   moves?: number
   mistakes?: number
   largestKind?: number
+  linesCleared?: number
 }
 
 export type NormalizedRun = {
@@ -30,6 +31,12 @@ export function normalizeRun(input: RunSubmission): NormalizedRun {
     const score = boundedInteger(input.score, 'score', 0, 10_000_000)
     const largestKind = boundedInteger(input.largestKind, 'largestKind', 0, 10)
     return {gameId: input.gameId, result: 'lost', score, level: null, durationMs, stats: {largestKind}}
+  }
+
+  if (input.gameId === 'block-blast') {
+    const score = boundedInteger(input.score, 'score', 0, 10_000_000)
+    const linesCleared = boundedInteger(input.linesCleared, 'linesCleared', 0, 100_000)
+    return {gameId: input.gameId, result: 'lost', score, level: null, durationMs, stats: {linesCleared}}
   }
 
   const level = boundedInteger(input.level, 'level', 1, 10_000)
@@ -75,7 +82,7 @@ export class RunRepository {
               row_number() over (order by r.score desc, r.duration_ms asc, r.created_at asc)::integer as rank
        from solo_runs r
        join "user" u on u.id = r.user_id
-       where r.game_id = $1 and ($1 = 'fruit-merge' or r.result = 'won')
+       where r.game_id = $1 and ($1 in ('fruit-merge', 'block-blast') or r.result = 'won')
        order by r.score desc, r.duration_ms asc, r.created_at asc
        limit $2`,
       [gameId, limit],

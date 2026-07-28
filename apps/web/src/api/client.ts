@@ -5,7 +5,7 @@ export const apiOrigin = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ?
 export const api = treaty<App>(apiOrigin, {fetch: {credentials: 'include'}})
 
 export type SoloRunSubmission = {
-  gameId: 'arrow-puzzle' | 'fruit-merge'
+  gameId: 'arrow-puzzle' | 'fruit-merge' | 'block-blast'
   result: 'won' | 'lost'
   durationMs: number
   score?: number
@@ -13,6 +13,7 @@ export type SoloRunSubmission = {
   moves?: number
   mistakes?: number
   largestKind?: number
+  linesCleared?: number
 }
 
 export async function submitSoloRun(run: SoloRunSubmission) {

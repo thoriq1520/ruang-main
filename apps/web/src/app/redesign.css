@@ -183,7 +183,8 @@ h3,
 .game-shelf .game-card-monopoly,
 .game-shelf .game-card-arrow-puzzle,
 .game-shelf .game-card-ludo,
-.game-shelf .game-card-fruit-merge {
+.game-shelf .game-card-fruit-merge,
+.game-shelf .game-card-block-blast {
   transform: none;
 }
 

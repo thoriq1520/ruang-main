@@ -22,36 +22,26 @@ function arrowLine(state: ArrowGameState, arrow: ArrowPiece, hinted: boolean) {
   const size = state.size
   const points = arrow.points.map((point) => `${point.column + .5},${point.row + .5}`).join(' ')
   const head = arrow.points.at(-1)!
-  const x = head.column + .5
-  const y = head.row + .5
-  const exit = arrow.direction === 'right' ? {x: size + .6, y}
-    : arrow.direction === 'left' ? {x: -.6, y}
-      : arrow.direction === 'down' ? {x, y: size + .6}
-        : {x, y: -.6}
+  const columns = arrow.points.map((point) => point.column + .5)
+  const rows = arrow.points.map((point) => point.row + .5)
+  const exit = arrow.direction === 'right' ? {x: size + .8 - Math.min(...columns), y: 0}
+    : arrow.direction === 'left' ? {x: -.8 - Math.max(...columns), y: 0}
+      : arrow.direction === 'down' ? {x: 0, y: size + .8 - Math.min(...rows)}
+        : {x: 0, y: -.8 - Math.max(...rows)}
   const travel = arrowTravel(state, arrow.id)!
-  const collision = {x: x + travel.x, y: y + travel.y}
-  const reboundTail = Math.min(.8, Math.hypot(travel.x, travel.y) / Math.max(1, arrow.points.length - 1))
   return `<g
     class="arrow-piece ${hinted ? 'is-hinted' : ''}"
     data-arrow-id="${arrow.id}"
     data-direction="${arrow.direction}"
-    style="--arrow-rebound-tail:${reboundTail}"
     role="button"
     tabindex="0"
     aria-label="Panah berbelit dengan kepala di baris ${head.row + 1}, kolom ${head.column + 1}, mengarah ke ${directionLabel[arrow.direction]}"
   >
+    <animateTransform class="arrow-safe-motion" attributeName="transform" type="translate" from="0 0" to="${exit.x} ${exit.y}" begin="indefinite" dur="440ms" calcMode="spline" keySplines=".2 .8 .2 1" fill="freeze" />
+    <animateTransform class="arrow-blocked-motion" attributeName="transform" type="translate" values="0 0;${travel.x} ${travel.y};0 0" begin="indefinite" dur="420ms" keyTimes="0;.48;1" calcMode="spline" keySplines=".35 0 .65 1;.35 0 .4 1" />
     <polyline class="arrow-hit" points="${points}" />
-    <polyline class="arrow-visible" pathLength="1" points="${points}" />
-    <line class="arrow-exit" x1="${x}" y1="${y}" x2="${x}" y2="${y}">
-      <animate class="arrow-safe-motion" attributeName="x2" from="${x}" to="${exit.x}" begin="indefinite" dur="480ms" calcMode="spline" keySplines=".2 .8 .2 1" fill="freeze" />
-      <animate class="arrow-safe-motion" attributeName="y2" from="${y}" to="${exit.y}" begin="indefinite" dur="480ms" calcMode="spline" keySplines=".2 .8 .2 1" fill="freeze" />
-    </line>
-    <line class="arrow-collision-run" pathLength="1" x1="${x}" y1="${y}" x2="${collision.x}" y2="${collision.y}" />
-    <g class="arrow-head-track">
-      <path class="arrow-head" d="${arrowHead(arrow)}" />
-      <animateTransform class="arrow-safe-motion" attributeName="transform" type="translate" from="0 0" to="${exit.x - x} ${exit.y - y}" begin="indefinite" dur="480ms" calcMode="spline" keySplines=".2 .8 .2 1" fill="freeze" />
-      <animateTransform class="arrow-blocked-motion" attributeName="transform" type="translate" values="0 0;${travel.x} ${travel.y};0 0" begin="indefinite" dur="480ms" keyTimes="0;.48;1" calcMode="spline" keySplines=".35 0 .65 1;.35 0 .4 1" />
-    </g>
+    <polyline class="arrow-visible" points="${points}" />
+    <path class="arrow-head" d="${arrowHead(arrow)}" />
   </g>`
 }
 

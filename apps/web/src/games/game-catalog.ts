@@ -1,6 +1,6 @@
 import type {RoomGameId} from '../network/network'
 
-export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge'
+export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast'
 
 export type GameCatalogItem = {
   id: GameId
@@ -135,6 +135,29 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
     ],
   },
+  {
+    id: 'block-blast',
+    slug: 'block-blast',
+    name: 'Block Blast',
+    playerLabel: 'SOLO',
+    genre: 'Puzzle balok',
+    description: 'Susun balok warna-warni, penuhi baris atau kolom, dan jaga papan tetap punya ruang.',
+    mode: 'solo',
+    seoTitle: 'Main Block Blast Gratis | Ruang Main',
+    seoDescription: 'Main Block Blast gratis di browser. Tarik balok warna-warni ke papan 8x8, bersihkan baris dan kolom, buat combo, lalu kejar skor tertinggi.',
+    guide: [
+      {
+        heading: 'Cara bermain Block Blast',
+        paragraphs: ['Pilih satu dari tiga bentuk balok dan letakkan di papan. Baris atau kolom yang terisi penuh akan langsung dibersihkan.'],
+        bullets: ['Tarik balok atau pilih lalu ketuk papan', 'Susun tanpa menyisakan celah sempit', 'Bersihkan beberapa garis untuk membuat combo', 'Habiskan tiga balok untuk mendapat pilihan baru'],
+      },
+      {
+        heading: 'Jaga ruang untuk bentuk berikutnya',
+        paragraphs: ['Permainan selesai ketika semua balok yang tersisa tidak lagi muat. Papan tidak disimpan setelah refresh, tetapi skor dapat dicatat dengan akun opsional.'],
+        bullets: ['Papan 8x8', 'Warna balok bervariasi', 'Permainan solo', 'Riwayat dan peringkat opsional'],
+      },
+    ],
+  },
 ] as const
 
 export function gameById(id: GameId) {
@@ -150,7 +173,9 @@ export function gameCard(item: GameCatalogItem, selected: boolean) {
         ? '<span class="game-card-ludo-board" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span>'
         : item.id === 'arrow-puzzle'
           ? '<span class="game-card-arrows" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M78 78H34V48H66V22H36"/><path d="m45 12-12 10 12 10"/></svg></span>'
-          : '<span class="game-card-fruit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>'
+          : item.id === 'fruit-merge'
+            ? '<span class="game-card-fruit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>'
+            : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
     <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>
