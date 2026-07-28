@@ -29,6 +29,15 @@ test('dua buah sejenis bergabung menjadi buah berikutnya dan menambah skor', () 
   assert.equal(game.score, 24)
 })
 
+test('dua buah terbesar (Semangka) bergabung akan menghilang dan mendapat poin bonus', () => {
+  const game = new FruitMergeGame(() => 0)
+  game.spawn(8, 200, 400).age = 1
+  game.spawn(8, 280, 400).age = 1
+  game.update(.016)
+  assert.equal(game.fruits.length, 0)
+  assert.equal(game.score, 225)
+})
+
 test('buah bergerak yang tetap melewati batas mengakhiri permainan', () => {
   const game = new FruitMergeGame(() => 0)
   const fruit = game.spawn(8, FRUIT_BOARD_WIDTH / 2, FRUIT_DANGER_Y - 20 + fruitSpecs[8].radius, 120)
@@ -43,4 +52,18 @@ test('buah bergerak yang tetap melewati batas mengakhiri permainan', () => {
 
   assert.equal(game.status, 'over')
   assert.equal(game.drop(), false)
+})
+
+test('save Fruit Merge memulihkan susunan buah dan skor', () => {
+  const game = new FruitMergeGame(() => 0)
+  game.spawn(3, 180, 420, 4, -2).age = 2
+  game.score = 144
+  game.setAim(310)
+
+  const restored = FruitMergeGame.fromSave(game.toSave(8_400), () => 0)
+
+  assert.equal(restored?.elapsedMs, 8_400)
+  assert.equal(restored?.game.score, 144)
+  assert.equal(restored?.game.aimX, 310)
+  assert.deepEqual(restored?.game.fruits, game.fruits)
 })

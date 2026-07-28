@@ -25,7 +25,7 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
           ${isSolo ? `
             <div class="play-actions solo-start">
               <button class="button button-primary" type="button" id="start-solo">Mulai bermain</button>
-              <p>Akun opsional menyimpan hasil, bukan posisi permainan.</p>
+              <p>Akun opsional menyimpan hasil dan permainan yang belum selesai.</p>
             </div>` : `
             <form class="play-actions" id="room-form" novalidate>
               <button class="button button-primary" type="button" id="create-room">Buat room</button>

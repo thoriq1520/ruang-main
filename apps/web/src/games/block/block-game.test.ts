@@ -15,6 +15,32 @@ test('papan awal sudah memiliki balok dan tetap menyediakan langkah', () => {
   assert.ok(game.pieces.some((piece, pieceIndex) => piece && game.board.some((row, rowIndex) => row.some((_, columnIndex) => game.canPlace(pieceIndex, rowIndex, columnIndex)))))
 })
 
+test('pola pembuka dapat perfect dalam maksimal tiga langkah', () => {
+  const game = new BlockBlastGame(() => 0)
+
+  assert.equal(game.place(0, 7, 0)?.perfect, false)
+  assert.equal(game.place(1, 6, 2)?.perfect, false)
+  assert.equal(game.place(2, 5, 5)?.perfect, true)
+  assert.ok(game.board.flat().every((cell) => cell === null))
+})
+
+test('tiga tray tanpa clear memberi satu balok penolong', () => {
+  const game = new BlockBlastGame(() => .999)
+  game.board.forEach((row) => row.fill(null))
+  const targets = [[0, 0], [1, 2], [2, 4], [3, 1], [4, 3], [5, 5], [6, 0], [7, 2], [0, 6]]
+
+  for (let tray = 0; tray < 3; tray += 1) {
+    game.pieces = Array.from({length: 3}, (_, index) => ({id: tray * 3 + index, color: '#test', cells: [{row: 0, column: 0}]}))
+    for (let index = 0; index < 3; index += 1) {
+      const [row, column] = targets[tray * 3 + index]
+      assert.ok(game.place(index, row, column))
+    }
+  }
+
+  assert.equal(game.pieces[0]?.cells.length, 1)
+  assert.equal(game.pieces[1]?.cells.length, 9)
+})
+
 test('baris penuh dibersihkan dan memberi bonus skor', () => {
   const game = new BlockBlastGame(() => 0)
   game.board[0].fill('#test', 0, 6)
@@ -66,4 +92,19 @@ test('combo berlanjut hanya jika clear berikutnya terjadi dalam tiga detik', () 
   assert.equal(clearRow(1).combo, 2)
   now = 6_001
   assert.equal(clearRow(2).combo, 1)
+})
+
+test('save Blok Brak memulihkan papan, tray, skor, dan durasi', () => {
+  let now = 1_000
+  const game = new BlockBlastGame(() => 0, () => now)
+  const move = game.place(0, 7, 0)
+  assert.ok(move)
+  now = 1_800
+
+  const restored = BlockBlastGame.fromSave(game.toSave(6_200), () => 0, () => now)
+
+  assert.equal(restored?.elapsedMs, 6_200)
+  assert.deepEqual(restored?.game.board, game.board)
+  assert.deepEqual(restored?.game.pieces, game.pieces)
+  assert.equal(restored?.game.score, game.score)
 })

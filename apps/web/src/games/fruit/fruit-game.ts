@@ -25,6 +25,19 @@ export type FruitBody = {
   pulse: number
 }
 
+export type FruitGameSave = {
+  version: 1
+  elapsedMs: number
+  game: {
+    fruits: FruitBody[]
+    nextKinds: number[]
+    score: number
+    aimX: number
+    dangerProgress: number
+    nextId: number
+  }
+}
+
 export const fruitSpecs: readonly FruitSpec[] = [
   {name: 'Ceri', radius: 18, color: '#e94b68', shade: '#b72f4b', cheek: '#ff9bad'},
   {name: 'Blueberry', radius: 24, color: '#6c75d8', shade: '#4850a8', cheek: '#aeb5ff'},
@@ -33,8 +46,8 @@ export const fruitSpecs: readonly FruitSpec[] = [
   {name: 'Apel', radius: 48, color: '#e35a4f', shade: '#ad342f', cheek: '#ffaaa0'},
   {name: 'Pir', radius: 58, color: '#d6c94c', shade: '#9a8e27', cheek: '#f4ec8b'},
   {name: 'Persik', radius: 69, color: '#ef897d', shade: '#bd554f', cheek: '#ffc1b7'},
-  {name: 'Melon', radius: 82, color: '#71b87a', shade: '#3c8450', cheek: '#ade0ad'},
-  {name: 'Semangka', radius: 96, color: '#3d9b67', shade: '#216641', cheek: '#83d1a3'},
+  {name: 'Melon', radius: 82, color: '#f3b43f', shade: '#b87c1c', cheek: '#ffe49e'},
+  {name: 'Semangka', radius: 96, color: '#27ae60', shade: '#145a32', cheek: '#82e0aa'},
 ] as const
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value))
@@ -53,6 +66,44 @@ export class FruitMergeGame {
   constructor(random: () => number = Math.random) {
     this.random = random
     this.nextKinds = [this.randomKind(), this.randomKind(), this.randomKind()]
+  }
+
+  toSave(elapsedMs: number): FruitGameSave {
+    return {
+      version: 1,
+      elapsedMs: Math.max(0, Math.round(elapsedMs)),
+      game: {
+        fruits: this.fruits.map((fruit) => ({...fruit})),
+        nextKinds: [...this.nextKinds],
+        score: this.score,
+        aimX: this.aimX,
+        dangerProgress: this.dangerProgress,
+        nextId: this.nextId,
+      },
+    }
+  }
+
+  static fromSave(value: unknown, random: () => number = Math.random) {
+    if (!value || typeof value !== 'object') return null
+    const save = value as Partial<FruitGameSave>
+    const state = save.game
+    const validKind = (kind: unknown) => Number.isInteger(kind) && Number(kind) >= 0 && Number(kind) < fruitSpecs.length
+    const finite = (number: unknown) => typeof number === 'number' && Number.isFinite(number)
+    if (save.version !== 1 || !finite(save.elapsedMs) || !state || !Array.isArray(state.fruits) || !Array.isArray(state.nextKinds)) return null
+    if (state.nextKinds.length !== 3 || !state.nextKinds.every(validKind) || !Number.isInteger(state.score) || state.score < 0) return null
+    if (!finite(state.aimX) || !finite(state.dangerProgress) || !Number.isInteger(state.nextId) || state.nextId < 1) return null
+    if (state.fruits.length > 250 || !state.fruits.every((fruit) => Number.isInteger(fruit.id) && validKind(fruit.kind)
+      && [fruit.x, fruit.y, fruit.vx, fruit.vy, fruit.angle, fruit.spin, fruit.age, fruit.pulse].every(finite))) return null
+
+    const game = new FruitMergeGame(random)
+    game.fruits = state.fruits.map((fruit) => ({...fruit}))
+    game.nextKinds = [...state.nextKinds]
+    game.score = state.score
+    game.aimX = clamp(state.aimX, 0, FRUIT_BOARD_WIDTH)
+    game.dangerProgress = clamp(state.dangerProgress, 0, .74)
+    game.dropCooldown = 0
+    game.nextId = Math.max(state.nextId, ...game.fruits.map((fruit) => fruit.id + 1), 1)
+    return {game, elapsedMs: Math.max(0, Number(save.elapsedMs))}
   }
 
   get largestKind() {
@@ -153,17 +204,22 @@ export class FruitMergeGame {
         if (distanceSquared >= minimumDistance * minimumDistance) continue
 
         const distance = Math.max(.001, Math.sqrt(distanceSquared))
-        if (first.kind === second.kind && first.kind < fruitSpecs.length - 1 && first.age > .05 && second.age > .05) {
+        if (first.kind === second.kind && first.age > .05 && second.age > .05) {
           merged.add(first.id)
           merged.add(second.id)
-          additions.push({
-            kind: first.kind + 1,
-            x: (first.x + second.x) / 2,
-            y: (first.y + second.y) / 2,
-            vx: (first.vx + second.vx) * .34,
-            vy: Math.min(-95, (first.vy + second.vy) * .2),
-          })
-          this.score += (first.kind + 1) * 12
+          if (first.kind < fruitSpecs.length - 1) {
+            additions.push({
+              kind: first.kind + 1,
+              x: (first.x + second.x) / 2,
+              y: (first.y + second.y) / 2,
+              vx: (first.vx + second.vx) * .34,
+              vy: Math.min(-95, (first.vy + second.vy) * .2),
+            })
+            this.score += (first.kind + 1) * 12
+          } else {
+            // Merging two of the largest fruit (Semangka) clears them and awards bonus score
+            this.score += (first.kind + 1) * 25
+          }
           break
         }
 

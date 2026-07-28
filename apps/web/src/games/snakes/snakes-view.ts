@@ -78,20 +78,73 @@ function cellCenter(number: number) {
 
 function links(map: SnakeMap) {
   const ladders = Object.entries(map.ladders).map(([from, to]) => {
-    const a = cellCenter(Number(from)); const b = cellCenter(to)
+    const a = cellCenter(Number(from))
+    const b = cellCenter(to)
     const length = Math.hypot(b.x - a.x, b.y - a.y)
-    const offset = {x: (-(b.y - a.y) / length) * 9, y: ((b.x - a.x) / length) * 9}
-    const rungs = Array.from({length: 6}, (_, index) => {
-      const progress = (index + 1) / 7
-      const x = a.x + (b.x - a.x) * progress
-      const y = a.y + (b.y - a.y) * progress
-      return `<line class="ladder-rung" x1="${x + offset.x}" y1="${y + offset.y}" x2="${x - offset.x}" y2="${y - offset.y}"/>`
+    const nx = -(b.y - a.y) / length
+    const ny = (b.x - a.x) / length
+    const w = 11
+
+    const rungCount = Math.max(3, Math.floor(length / 38))
+    const rungs = Array.from({length: rungCount}, (_, index) => {
+      const progress = (index + 1) / (rungCount + 1)
+      const rx = a.x + (b.x - a.x) * progress
+      const ry = a.y + (b.y - a.y) * progress
+      const lx = rx + nx * w
+      const ly = ry + ny * w
+      const rxPos = rx - nx * w
+      const ryPos = ry - ny * w
+      return `
+        <line class="ladder-rung" x1="${lx}" y1="${ly}" x2="${rxPos}" y2="${ryPos}"/>
+        <line class="ladder-rung-core" x1="${lx}" y1="${ly}" x2="${rxPos}" y2="${ryPos}"/>
+        <circle class="ladder-joint" cx="${lx}" cy="${ly}" r="3"/>
+        <circle class="ladder-joint" cx="${rxPos}" cy="${ryPos}" r="3"/>
+      `
     }).join('')
-    return `<g class="ladder-link"><line x1="${a.x + offset.x}" y1="${a.y + offset.y}" x2="${b.x + offset.x}" y2="${b.y + offset.y}"/><line x1="${a.x - offset.x}" y1="${a.y - offset.y}" x2="${b.x - offset.x}" y2="${b.y - offset.y}"/>${rungs}</g>`
+
+    return `<g class="ladder-link">
+      <line class="ladder-rail" x1="${a.x + nx * w}" y1="${a.y + ny * w}" x2="${b.x + nx * w}" y2="${b.y + ny * w}"/>
+      <line class="ladder-rail" x1="${a.x - nx * w}" y1="${a.y - ny * w}" x2="${b.x - nx * w}" y2="${b.y - ny * w}"/>
+      <line class="ladder-rail-core" x1="${a.x + nx * w}" y1="${a.y + ny * w}" x2="${b.x + nx * w}" y2="${b.y + ny * w}"/>
+      <line class="ladder-rail-core" x1="${a.x - nx * w}" y1="${a.y - ny * w}" x2="${b.x - nx * w}" y2="${b.y - ny * w}"/>
+      ${rungs}
+    </g>`
   }).join('')
-  const snakes = Object.entries(map.snakes).map(([from, to]) => {
-    const a = cellCenter(Number(from)); const b = cellCenter(to); const cx = (a.x + b.x) / 2 + 45; const cy = (a.y + b.y) / 2
-    return `<g class="snake-link"><path d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}"/><circle cx="${a.x}" cy="${a.y}" r="13"/></g>`
+
+  const snakes = Object.entries(map.snakes).map(([from, to], index) => {
+    const a = cellCenter(Number(from))
+    const b = cellCenter(to)
+    const length = Math.hypot(b.x - a.x, b.y - a.y)
+    const nx = -(b.y - a.y) / length
+    const ny = (b.x - a.x) / length
+
+    const waveAmp = (index % 2 === 0 ? 1 : -1) * Math.min(48, length * 0.26)
+    const c1x = a.x + (b.x - a.x) * 0.3 + nx * waveAmp
+    const c1y = a.y + (b.y - a.y) * 0.3 + ny * waveAmp
+    const c2x = a.x + (b.x - a.x) * 0.7 - nx * waveAmp
+    const c2y = a.y + (b.y - a.y) * 0.7 - ny * waveAmp
+
+    const pathD = `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`
+    const headAngleDeg = (Math.atan2(c1y - a.y, c1x - a.x) * 180) / Math.PI
+
+    return `<g class="snake-link">
+      <path class="snake-shadow" d="${pathD}"/>
+      <path class="snake-outline" d="${pathD}"/>
+      <path class="snake-body" d="${pathD}"/>
+      <path class="snake-pattern" d="${pathD}"/>
+      <circle class="snake-tail" cx="${b.x}" cy="${b.y}" r="6.5"/>
+      <g transform="translate(${a.x}, ${a.y}) rotate(${headAngleDeg})">
+        <path class="snake-tongue" d="M 12 0 L 23 0 L 27 -4 M 23 0 L 27 4"/>
+        <ellipse class="snake-head" cx="2" cy="0" rx="16" ry="12"/>
+        <circle class="snake-eye-white" cx="6" cy="-5" r="4"/>
+        <circle class="snake-eye-pupil" cx="7.2" cy="-5" r="2"/>
+        <circle class="snake-eye-white" cx="6" cy="5" r="4"/>
+        <circle class="snake-eye-pupil" cx="7.2" cy="5" r="2"/>
+        <circle class="snake-cheek" cx="-1" cy="-6" r="2.8" opacity="0.45"/>
+        <circle class="snake-cheek" cx="-1" cy="6" r="2.8" opacity="0.45"/>
+      </g>
+    </g>`
   }).join('')
+
   return ladders + snakes
 }

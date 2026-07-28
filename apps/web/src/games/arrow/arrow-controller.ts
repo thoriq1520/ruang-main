@@ -1,13 +1,16 @@
 import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
-import {createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './arrow-game'
+import {createArrowGame, hintArrow, isArrowFree, releaseArrow, restoreArrowGame, saveArrowGame, type ArrowGameState} from './arrow-game'
 import {arrowGameScreen} from './arrow-view'
-import {submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
 
 export function createArrowController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: ArrowGameState | null = null
   let startedAt = 0
   let submitted = false
+  let authenticated = false
+  let startToken = 0
 
   const startLevel = (level = 1) => {
     game = createArrowGame(level)
@@ -15,9 +18,14 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     submitted = false
   }
 
+  const persist = () => {
+    if (authenticated && game?.status === 'playing') void saveSoloGame('arrow-puzzle', saveArrowGame(game, performance.now() - startedAt))
+  }
+
   const submitResult = (state: ArrowGameState) => {
     if (submitted || state.status === 'playing') return
     submitted = true
+    if (authenticated) void archiveSoloGame('arrow-puzzle')
     void submitSoloRun({gameId: 'arrow-puzzle', result: state.status, level: state.level, moves: state.moves, mistakes: state.mistakes, durationMs: Math.round(performance.now() - startedAt)})
   }
 
@@ -48,6 +56,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
       window.setTimeout(() => {
         if (!game) return
         game = releaseArrow(game, id)
+        persist()
         submitResult(game)
         render()
       }, reducedMotion() ? 0 : 500)
@@ -64,30 +73,52 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     root.querySelector('#hint-arrow')?.addEventListener('click', () => {
       if (!game) return
       game = hintArrow(game)
+      persist()
       render()
     })
     root.querySelectorAll('[data-restart-arrow]').forEach((button) => button.addEventListener('click', () => {
       if (!game) return
-      startLevel(game.level)
-      render()
+      void startFresh(game.level)
     }))
     root.querySelector('#next-arrow-level')?.addEventListener('click', () => {
       if (!game) return
       startLevel(game.level + 1)
+      persist()
       render()
     })
   }
 
-  const start = () => {
-    startLevel()
+  const startFresh = async (level: number) => {
+    if (authenticated) await archiveSoloGame('arrow-puzzle').catch(() => false)
+    startLevel(level)
+    persist()
     render()
+  }
+
+  const start = () => {
+    const token = ++startToken
+    root.innerHTML = soloSaveLoadingScreen('Arrow Puzzle')
+    void prepareSoloStart('arrow-puzzle', 'Arrow Puzzle').then(async (prepared) => {
+      if (token !== startToken) return
+      authenticated = prepared.authenticated
+      const restored = prepared.state ? restoreArrowGame(prepared.state) : null
+      if (prepared.state && !restored && authenticated) await archiveSoloGame('arrow-puzzle').catch(() => false)
+      if (token !== startToken) return
+      if (restored) {
+        game = restored.game
+        startedAt = performance.now() - restored.elapsedMs
+        submitted = false
+      } else startLevel()
+      persist()
+      render()
+    })
   }
 
   return {
     get active() { return game !== null },
     start,
     render,
-    reset() { game = null; submitted = false },
+    reset() { startToken += 1; game = null; submitted = false; authenticated = false },
   }
 }
 

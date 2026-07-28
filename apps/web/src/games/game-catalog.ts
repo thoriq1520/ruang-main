@@ -1,6 +1,6 @@
 import type {RoomGameId} from '../network/network'
 
-export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast'
+export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice'
 
 export type GameCatalogItem = {
   id: GameId
@@ -10,6 +10,7 @@ export type GameCatalogItem = {
   genre: string
   description: string
   mode: 'online' | 'solo'
+  coverImage?: string
   seoTitle: string
   seoDescription: string
   guide: Array<{
@@ -107,7 +108,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
       {
         heading: 'Level terus berubah',
-        paragraphs: ['Pola dihasilkan untuk memberi susunan dan tingkat kesulitan yang berbeda. Posisi level kembali ke awal setelah halaman dimuat ulang, sedangkan hasil dapat dicatat dengan akun opsional.'],
+        paragraphs: ['Pola dihasilkan untuk memberi susunan dan tingkat kesulitan yang berbeda. Pemain login dapat melanjutkan level yang belum selesai dan mencatat hasilnya.'],
         bullets: ['Permainan solo', 'Login opsional', 'Riwayat dan peringkat', 'Dapat dimainkan di desktop dan mobile'],
       },
     ],
@@ -130,30 +131,53 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
       {
         heading: 'Tumpukan tidak boleh melewati batas',
-        paragraphs: ['Permainan selesai jika buah yang sudah tenang bertahan di atas garis batas. Posisi permainan tidak dipulihkan setelah refresh, tetapi skor dapat dicatat dengan akun opsional.'],
+        paragraphs: ['Permainan selesai jika buah yang sudah tenang bertahan di atas garis batas. Pemain login dapat melanjutkan tumpukan yang belum selesai dan mencatat skor.'],
         bullets: ['Permainan solo', 'Physics berjalan langsung di browser', 'Login opsional', 'Riwayat dan peringkat'],
+      },
+    ],
+  },
+  {
+    id: 'fruit-slice',
+    slug: 'tebas-buah',
+    name: 'Tebas Buah',
+    playerLabel: 'SOLO',
+    genre: 'Aksi refleks',
+    description: 'Sapukan jari atau mouse untuk membelah buah, membuat combo, dan menghindari bom.',
+    mode: 'solo',
+    seoTitle: 'Main Tebas Buah Gratis | Ruang Main',
+    seoDescription: 'Main Tebas Buah gratis di browser. Tebas buah dengan swipe, buat combo dalam satu sapuan, hindari bom, dan jaga tiga nyawa.',
+    guide: [
+      {
+        heading: 'Cara bermain Tebas Buah',
+        paragraphs: ['Tahan lalu sapukan jari atau mouse melewati buah yang terlontar. Setiap buah yang terbelah menambah skor.'],
+        bullets: ['Tebas tiga buah atau lebih dalam satu sapuan untuk combo', 'Jangan menyentuh bom', 'Buah yang jatuh mengurangi satu nyawa', 'Permainan selesai setelah tiga buah terlewat'],
+      },
+      {
+        heading: 'Tempo terus meningkat',
+        paragraphs: ['Gelombang buah menjadi lebih ramai seiring skor bertambah. Pemain login dapat melanjutkan permainan yang belum selesai dan mencatat skor ke peringkat.'],
+        bullets: ['Kontrol sentuh dan mouse', 'Tiga nyawa', 'Save game untuk akun', 'Peringkat skor solo'],
       },
     ],
   },
   {
     id: 'block-blast',
     slug: 'block-blast',
-    name: 'Block Blast',
+    name: 'Blok Brak',
     playerLabel: 'SOLO',
     genre: 'Puzzle balok',
     description: 'Susun balok warna-warni, penuhi baris atau kolom, dan jaga papan tetap punya ruang.',
     mode: 'solo',
-    seoTitle: 'Main Block Blast Gratis | Ruang Main',
-    seoDescription: 'Main Block Blast gratis di browser. Tarik balok warna-warni ke papan 8x8, bersihkan baris dan kolom, buat combo, lalu kejar skor tertinggi.',
+    seoTitle: 'Main Blok Brak Gratis | Ruang Main',
+    seoDescription: 'Main Blok Brak gratis di browser. Tarik balok warna-warni ke papan 8x8, bersihkan baris dan kolom, buat combo, lalu kejar skor tertinggi.',
     guide: [
       {
-        heading: 'Cara bermain Block Blast',
+        heading: 'Cara bermain Blok Brak',
         paragraphs: ['Pilih satu dari tiga bentuk balok dan letakkan di papan. Baris atau kolom yang terisi penuh akan langsung dibersihkan.'],
         bullets: ['Tarik balok atau pilih lalu ketuk papan', 'Susun tanpa menyisakan celah sempit', 'Bersihkan beberapa garis untuk membuat combo', 'Habiskan tiga balok untuk mendapat pilihan baru'],
       },
       {
         heading: 'Jaga ruang untuk bentuk berikutnya',
-        paragraphs: ['Permainan selesai ketika semua balok yang tersisa tidak lagi muat. Papan tidak disimpan setelah refresh, tetapi skor dapat dicatat dengan akun opsional.'],
+        paragraphs: ['Permainan selesai ketika semua balok yang tersisa tidak lagi muat. Pemain login dapat melanjutkan papan yang belum selesai dan mencatat skor.'],
         bullets: ['Papan 8x8', 'Warna balok bervariasi', 'Permainan solo', 'Riwayat dan peringkat opsional'],
       },
     ],
@@ -175,7 +199,9 @@ export function gameCard(item: GameCatalogItem, selected: boolean) {
           ? '<span class="game-card-arrows" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M78 78H34V48H66V22H36"/><path d="m45 12-12 10 12 10"/></svg></span>'
           : item.id === 'fruit-merge'
             ? '<span class="game-card-fruit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>'
-            : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
+            : item.id === 'fruit-slice'
+              ? '<span class="game-card-slice" aria-hidden="true"><i></i><i></i><b></b><em></em><small></small><small></small><small></small></span>'
+              : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
     <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>

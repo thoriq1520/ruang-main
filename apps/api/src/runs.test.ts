@@ -14,10 +14,16 @@ describe('normalisasi hasil solo', () => {
     expect(run.stats).toEqual({largestKind: 5})
   })
 
-  test('Block Blast menyimpan skor dan jumlah garis', () => {
+  test('Blok Brak menyimpan skor dan jumlah garis', () => {
     const run = normalizeRun({gameId: 'block-blast', result: 'lost', score: 1_240, linesCleared: 8, durationMs: 75_000})
     expect(run.score).toBe(1_240)
     expect(run.stats).toEqual({linesCleared: 8})
+  })
+
+  test('Tebas Buah menyimpan skor dan combo terbaik', () => {
+    const run = normalizeRun({gameId: 'fruit-slice', result: 'lost', score: 860, bestCombo: 7, fruitsSliced: 412, durationMs: 90_000})
+    expect(run.score).toBe(860)
+    expect(run.stats).toEqual({bestCombo: 7, fruitsSliced: 412})
   })
 
   test('nilai yang tidak masuk akal ditolak', () => {

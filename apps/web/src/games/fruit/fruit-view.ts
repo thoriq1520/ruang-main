@@ -114,20 +114,22 @@ function drawFruit(context: CanvasRenderingContext2D, fruit: FruitBody) {
   drawFruitCharacter(context, fruit.kind, fruit.x, fruit.y, radius * scale, fruit.angle, fruit.vx)
 }
 
-function drawFruitCharacter(context: CanvasRenderingContext2D, kind: number, x: number, y: number, radius: number, angle: number, velocityX: number) {
+export function drawFruitCharacter(context: CanvasRenderingContext2D, kind: number, x: number, y: number, radius: number, angle: number, velocityX: number, withShadow = true) {
   const spec = fruitSpecs[kind]
   context.save()
   context.translate(x, y)
   context.rotate(angle)
 
-  context.save()
-  context.translate(0, radius * .76)
-  context.scale(1, .28)
-  context.fillStyle = 'rgba(33, 57, 43, .2)'
-  context.beginPath()
-  context.arc(0, 0, radius * .78, 0, Math.PI * 2)
-  context.fill()
-  context.restore()
+  if (withShadow) {
+    context.save()
+    context.translate(0, radius * .76)
+    context.scale(1, .28)
+    context.fillStyle = 'rgba(33, 57, 43, .2)'
+    context.beginPath()
+    context.arc(0, 0, radius * .78, 0, Math.PI * 2)
+    context.fill()
+    context.restore()
+  }
 
   const fill = context.createRadialGradient(-radius * .34, -radius * .38, radius * .08, 0, 0, radius)
   fill.addColorStop(0, lighten(spec.color))
@@ -219,9 +221,18 @@ function drawFruitDetail(context: CanvasRenderingContext2D, kind: number, radius
       context.arc(radius * dx, radius * dy, Math.max(1.2, radius * .035), 0, Math.PI * 2)
       context.fill()
     }
-  } else if (kind >= 7) {
-    context.strokeStyle = 'rgba(22, 91, 54, .45)'
-    context.lineWidth = Math.max(2, radius * .045)
+  } else if (kind === 7) {
+    context.strokeStyle = 'rgba(255, 255, 255, .32)'
+    context.lineWidth = Math.max(1.5, radius * .038)
+    context.setLineDash([4, 4])
+    for (const offset of [-.45, 0, .45]) {
+      context.beginPath()
+      context.arc(radius * offset, 0, radius * .76, -1.15, 1.15)
+      context.stroke()
+    }
+  } else if (kind === 8) {
+    context.strokeStyle = 'rgba(15, 60, 32, .55)'
+    context.lineWidth = Math.max(2.5, radius * .05)
     for (const offset of [-.45, 0, .45]) {
       context.beginPath()
       context.arc(radius * offset, 0, radius * .76, -1.15, 1.15)

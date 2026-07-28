@@ -6,9 +6,10 @@ import {config, isAllowedWebOrigin} from './config'
 import {getPool} from './db/pool'
 import {apiResponse} from './response'
 import {normalizeRun, RunRepository, soloGameIds} from './runs'
+import {normalizeSaveState, SaveRepository} from './saves'
 
 const runBody = t.Object({
-  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge'), t.Literal('block-blast')]),
+  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge'), t.Literal('block-blast'), t.Literal('fruit-slice')]),
   result: t.Union([t.Literal('won'), t.Literal('lost')]),
   durationMs: t.Integer({minimum: 0, maximum: 86_400_000}),
   score: t.Optional(t.Integer()),
@@ -17,6 +18,8 @@ const runBody = t.Object({
   mistakes: t.Optional(t.Integer()),
   largestKind: t.Optional(t.Integer()),
   linesCleared: t.Optional(t.Integer()),
+  bestCombo: t.Optional(t.Integer()),
+  fruitsSliced: t.Optional(t.Integer()),
 })
 
 const requestStartedAt = new WeakMap<Request, number>()
@@ -29,6 +32,7 @@ function errorMessage(error: unknown) {
 export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot = true) {
   const auth = createAuth(pool)
   const repository = new RunRepository(pool)
+  const saves = new SaveRepository(pool)
 
   return new Elysia({adapter, aot})
     .onRequest(({request}) => {
@@ -87,6 +91,36 @@ export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot =
           ? apiResponse(200, 'Riwayat permainan ditemukan.', await repository.history(session.user.id))
           : status(401, apiResponse(401, 'Silakan masuk terlebih dahulu.', null, 'UNAUTHORIZED'))
       })
+      .get('/solo-saves/:gameId', async ({params, request, status}) => {
+        const session = await auth.api.getSession({headers: request.headers})
+        if (!session) return status(401, apiResponse(401, 'Silakan masuk untuk memuat permainan.', null, 'UNAUTHORIZED'))
+        if (!soloGameIds.includes(params.gameId as typeof soloGameIds[number])) {
+          return status(404, apiResponse(404, 'Game tidak ditemukan.', null, 'GAME_NOT_FOUND'))
+        }
+        return apiResponse(200, 'Save game ditemukan.', await saves.active(session.user.id, params.gameId as typeof soloGameIds[number]))
+      }, {params: t.Object({gameId: t.String()})})
+      .put('/solo-saves/:gameId', async ({body, params, request, status}) => {
+        const session = await auth.api.getSession({headers: request.headers})
+        if (!session) return status(401, apiResponse(401, 'Silakan masuk untuk menyimpan permainan.', null, 'UNAUTHORIZED'))
+        if (!soloGameIds.includes(params.gameId as typeof soloGameIds[number])) {
+          return status(404, apiResponse(404, 'Game tidak ditemukan.', null, 'GAME_NOT_FOUND'))
+        }
+        try {
+          const state = normalizeSaveState(body.state)
+          return apiResponse(200, 'Permainan tersimpan.', await saves.save(session.user.id, params.gameId as typeof soloGameIds[number], state))
+        } catch (error) {
+          return status(400, apiResponse(400, error instanceof Error ? error.message : 'Save game tidak valid.', null, 'INVALID_SAVE'))
+        }
+      }, {params: t.Object({gameId: t.String()}), body: t.Object({state: t.Unknown()})})
+      .post('/solo-saves/:gameId/archive', async ({params, request, status}) => {
+        const session = await auth.api.getSession({headers: request.headers})
+        if (!session) return status(401, apiResponse(401, 'Silakan masuk untuk mengelola permainan.', null, 'UNAUTHORIZED'))
+        if (!soloGameIds.includes(params.gameId as typeof soloGameIds[number])) {
+          return status(404, apiResponse(404, 'Game tidak ditemukan.', null, 'GAME_NOT_FOUND'))
+        }
+        await saves.archive(session.user.id, params.gameId as typeof soloGameIds[number])
+        return apiResponse(200, 'Permainan lama diarsipkan.', {archived: true})
+      }, {params: t.Object({gameId: t.String()})})
       .get('/leaderboards/:gameId', async ({params, status}) => {
         if (!soloGameIds.includes(params.gameId as typeof soloGameIds[number])) {
           return status(404, apiResponse(404, 'Game tidak ditemukan.', null, 'GAME_NOT_FOUND'))

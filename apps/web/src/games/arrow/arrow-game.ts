@@ -25,6 +25,12 @@ export type ArrowGameState = {
   lastAction: {id: string; result: 'released' | 'blocked'} | null
 }
 
+export type ArrowSave = {
+  version: 1
+  elapsedMs: number
+  game: ArrowGameState
+}
+
 const vectors: Record<ArrowDirection, readonly [number, number]> = {
   up: [-1, 0],
   right: [0, 1],
@@ -175,6 +181,27 @@ export function createArrowGame(level = 1): ArrowGameState {
     hintId: null,
     lastAction: null,
   }
+}
+
+export function saveArrowGame(game: ArrowGameState, elapsedMs: number): ArrowSave {
+  return {version: 1, elapsedMs: Math.max(0, Math.round(elapsedMs)), game}
+}
+
+export function restoreArrowGame(value: unknown) {
+  if (!value || typeof value !== 'object') return null
+  const save = value as Partial<ArrowSave>
+  const game = save.game
+  if (save.version !== 1 || !Number.isFinite(save.elapsedMs) || !game || game.status !== 'playing') return null
+  if (!Number.isInteger(game.level) || game.level < 1 || !Number.isInteger(game.size) || game.size < 3 || game.size > 25) return null
+  if (!Number.isInteger(game.lives) || game.lives < 1 || game.lives > 3 || game.maxLives !== 3 || !Number.isInteger(game.moves) || !Number.isInteger(game.mistakes)) return null
+  if (!Array.isArray(game.arrows) || !game.arrows.length || !game.arrows.every((arrow) =>
+    typeof arrow.id === 'string'
+    && directions.includes(arrow.direction)
+    && Array.isArray(arrow.points)
+    && arrow.points.length >= 2
+    && arrow.points.every((point) => Number.isInteger(point.row) && Number.isInteger(point.column) && insideBoard(point, game.size)),
+  )) return null
+  return {game, elapsedMs: Math.max(0, Number(save.elapsedMs))}
 }
 
 export function isArrowFree(state: ArrowGameState, id: string) {

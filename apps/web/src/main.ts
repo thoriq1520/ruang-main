@@ -2,6 +2,7 @@ import './style.css'
 import './app/home.css'
 import './games/fruit/fruit.css'
 import './games/block/block.css'
+import './games/slice/slice.css'
 import './app/redesign.css'
 import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
@@ -47,6 +48,7 @@ import {updateDocumentMeta} from './app/seo'
 import {createArrowController} from './games/arrow/arrow-controller'
 import {createFruitController} from './games/fruit/fruit-controller'
 import {createBlockController} from './games/block/block-controller'
+import {createSliceController} from './games/slice/slice-controller'
 import {homeScreen} from './app/home-view'
 import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
 import {bindAccountUi} from './auth/account-controller'
@@ -63,7 +65,7 @@ let isDemo = false
 const requestedGameId = new URLSearchParams(location.search).get('game')
 let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'slice-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
@@ -77,6 +79,7 @@ let joinTimer = 0
 const arrowController = createArrowController(app, bindLeaveButtons)
 const fruitController = createFruitController(app, bindLeaveButtons)
 const blockController = createBlockController(app, bindLeaveButtons)
+const sliceController = createSliceController(app, bindLeaveButtons)
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
 if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
@@ -84,7 +87,7 @@ if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.repl
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
 window.addEventListener('popstate', () => {
-  if (!game && !arrowController.active && !fruitController.active && !blockController.active && !snakesGame && !ludoGame && view === 'home') render()
+  if (!game && !arrowController.active && !fruitController.active && !blockController.active && !sliceController.active && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
@@ -108,6 +111,7 @@ function render() {
   else if (view === 'arrow-game') arrowController.render()
   else if (view === 'fruit-game') fruitController.render()
   else if (view === 'block-game') blockController.render()
+  else if (view === 'slice-game') sliceController.render()
   else if (view === 'snakes-lobby') renderSnakesLobby()
   else if (view === 'snakes-game') renderSnakesGame()
   else if (view === 'ludo-lobby') renderLudoLobby()
@@ -130,7 +134,7 @@ function renderHome() {
   }))
 
   if (isSolo) {
-    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : startArrowGame)
+    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : selectedGameId === 'fruit-slice' ? startSliceGame : startArrowGame)
     return
   }
 
@@ -179,6 +183,7 @@ function renderHome() {
 function startArrowGame() {
   fruitController.reset()
   blockController.reset()
+  sliceController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -192,6 +197,7 @@ function startArrowGame() {
 function startFruitGame() {
   arrowController.reset()
   blockController.reset()
+  sliceController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -205,6 +211,7 @@ function startFruitGame() {
 function startBlockGame() {
   arrowController.reset()
   fruitController.reset()
+  sliceController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -212,6 +219,20 @@ function startBlockGame() {
   homeNotice = ''
   view = 'block-game'
   blockController.start()
+  window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function startSliceGame() {
+  arrowController.reset()
+  fruitController.reset()
+  blockController.reset()
+  game = null
+  snakesGame = null
+  ludoGame = null
+  network = null
+  homeNotice = ''
+  view = 'slice-game'
+  sliceController.start()
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
@@ -531,6 +552,7 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   if (selectedGameId === 'fruit-merge') return startFruitGame()
   if (selectedGameId === 'block-blast') return startBlockGame()
+  if (selectedGameId === 'fruit-slice') return startSliceGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -671,6 +693,7 @@ function openDemo() {
   if (selectedGameId === 'arrow-puzzle') return startArrowGame()
   if (selectedGameId === 'fruit-merge') return startFruitGame()
   if (selectedGameId === 'block-blast') return startBlockGame()
+  if (selectedGameId === 'fruit-slice') return startSliceGame()
   activeGameId = selectedGameId
   if (activeGameId === 'ludo') {
     ludoGame = createLudoDemo()
@@ -926,19 +949,156 @@ function snakeCellPoint(position: number) {
 
 function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
   const selector = snakeTokenSelector(move.playerId)
-  const target = elementScreenPoint(selector)
-  if (!target) return
-  const points: ScreenPoint[] = [origin ?? snakeCellPoint(move.from) ?? target]
+  const piece = document.querySelector<HTMLElement>(selector)
+  const finalTarget = elementScreenPoint(selector)
+  if (!piece || !finalTarget || reducedMotion()) return
+
+  const walkPoints: ScreenPoint[] = [origin ?? snakeCellPoint(move.from) ?? finalTarget]
   for (let position = move.from + 1; position <= move.landed; position++) {
     const point = snakeCellPoint(position)
-    if (point) points.push(point)
+    if (point) walkPoints.push(point)
   }
-  if (move.to !== move.landed) {
-    const effectTarget = snakeCellPoint(move.to)
-    if (effectTarget) points.push(effectTarget)
+
+  // Normal move without ladder/snake effect
+  if (move.landed === move.to) {
+    walkPoints[walkPoints.length - 1] = finalTarget
+    animateBoardPiece(selector, walkPoints)
+    return
   }
-  points[points.length - 1] = target
-  animateBoardPiece(selector, points)
+
+  // Ladder or Snake move: Unified single-timeline animation so no snapping/flashing occurs!
+  const landedPoint = snakeCellPoint(move.landed) ?? walkPoints[walkPoints.length - 1]
+  const destinationPoint = finalTarget
+
+  const walkSteps = Math.max(1, walkPoints.length - 1)
+  const walkTime = walkSteps * 160
+  const pauseTime = 280
+
+  const dx = destinationPoint.x - landedPoint.x
+  const dy = destinationPoint.y - landedPoint.y
+  const distance = Math.hypot(dx, dy)
+  const climbTime = move.effect === 'ladder'
+    ? Math.min(1200, Math.max(700, Math.floor(distance * 2.2)))
+    : Math.min(1200, Math.max(750, Math.floor(distance * 2.4)))
+
+  const totalTime = walkTime + pauseTime + climbTime
+
+  const walkFraction = walkTime / totalTime
+  const pauseFraction = (walkTime + pauseTime) / totalTime
+
+  const frames: Keyframe[] = []
+
+  // Phase 1: Walk to base of ladder / head of snake
+  for (let index = 0; index < walkPoints.length; index++) {
+    const point = walkPoints[index]
+    const stepProgress = index / walkSteps
+    const offset = stepProgress * walkFraction
+
+    if (index > 0) {
+      const prev = walkPoints[index - 1]
+      const currentPos = move.from + index - 1
+      const isRowTurn = currentPos > 0 && currentPos % 10 === 0
+      let arcX = 0
+      if (isRowTurn) {
+        const row = Math.floor((currentPos - 1) / 10)
+        arcX = row % 2 === 0 ? 20 : -20
+      }
+      const midX = (prev.x + point.x) / 2 + arcX - finalTarget.x
+      const midY = (prev.y + point.y) / 2 - 14 - finalTarget.y
+      const midOffset = ((index - 0.5) / walkSteps) * walkFraction
+
+      frames.push({
+        offset: midOffset,
+        transform: `translate3d(${midX}px, ${midY}px, 0) scale(${isRowTurn ? 1.2 : 1.12})`,
+        filter: 'drop-shadow(0 10px 5px rgba(0,0,0,.38))',
+      })
+    }
+
+    frames.push({
+      offset,
+      transform: `translate3d(${point.x - finalTarget.x}px, ${point.y - finalTarget.y}px, 0) scale(1)`,
+      filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
+    })
+  }
+
+  // Trigger Toast right as pawn lands on the ladder/snake tile
+  window.setTimeout(() => {
+    if (move.effect === 'ladder') showToast(`Naik tangga ke ${move.to}! 🪜`)
+    else if (move.effect === 'snake') showToast(`Terpeleset ular! Turun ke ${move.to} 🐍`)
+  }, walkTime + 20)
+
+  // Phase 2: Pause at landed cell with an eager pulse
+  frames.push({
+    offset: walkFraction + (pauseFraction - walkFraction) * 0.5,
+    transform: `translate3d(${landedPoint.x - finalTarget.x}px, ${landedPoint.y - finalTarget.y - 6}px, 0) scale(1.18) rotate(${move.effect === 'snake' ? '-10deg' : '4deg'})`,
+    filter: 'drop-shadow(0 8px 4px rgba(0,0,0,.4))',
+  })
+  frames.push({
+    offset: pauseFraction,
+    transform: `translate3d(${landedPoint.x - finalTarget.x}px, ${landedPoint.y - finalTarget.y}px, 0) scale(1)`,
+    filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
+  })
+
+  // Phase 3: Ladder Climb or Snake Slide
+  const effectSpan = 1.0 - pauseFraction
+
+  if (move.effect === 'ladder') {
+    const climbSteps = Math.max(4, Math.floor(distance / 40))
+    for (let step = 1; step <= climbSteps; step++) {
+      const stepProg = step / climbSteps
+      const offset = pauseFraction + stepProg * effectSpan
+      const px = landedPoint.x + dx * stepProg - finalTarget.x
+      const py = landedPoint.y + dy * stepProg - finalTarget.y
+      const isStepMid = step < climbSteps && step % 2 === 1
+      const lift = isStepMid ? -12 : 0
+      const scale = isStepMid ? 1.2 : 1.06
+      const rot = isStepMid ? 6 : -4
+
+      frames.push({
+        offset,
+        transform: `translate3d(${px}px, ${py + lift}px, 0) scale(${scale}) rotate(${rot}deg)`,
+        filter: isStepMid ? 'drop-shadow(0 14px 7px rgba(0,0,0,.45))' : 'drop-shadow(0 4px 2px rgba(0,0,0,.48))',
+      })
+    }
+  } else {
+    const slideSteps = 10
+    const nx = -dy / (distance || 1)
+    const ny = dx / (distance || 1)
+    for (let step = 1; step <= slideSteps; step++) {
+      const stepProg = step / slideSteps
+      const offset = pauseFraction + stepProg * effectSpan
+      const wave = Math.sin(stepProg * Math.PI * 2) * 26
+      const px = landedPoint.x + dx * stepProg + nx * wave - finalTarget.x
+      const py = landedPoint.y + dy * stepProg + ny * wave - finalTarget.y
+      const angle = Math.cos(stepProg * Math.PI * 2) * 16
+
+      frames.push({
+        offset,
+        transform: `translate3d(${px}px, ${py}px, 0) scale(1.12) rotate(${angle}deg)`,
+        filter: 'drop-shadow(0 9px 5px rgba(0,0,0,.4))',
+      })
+    }
+  }
+
+  // Land cleanly on target tile
+  frames[frames.length - 1] = {
+    offset: 1,
+    transform: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
+    filter: 'drop-shadow(0 3px 2px rgba(0,0,0,.48))',
+  }
+
+  piece.classList.add('is-board-moving')
+  const animation = piece.animate(frames, {
+    duration: totalTime,
+    easing: 'linear',
+    fill: 'both',
+  })
+
+  const cleanUp = () => {
+    animation.cancel()
+    piece.classList.remove('is-board-moving')
+  }
+  void animation.finished.then(cleanUp, cleanUp)
 }
 
 function ludoTokenKey(playerId: string, tokenIndex: number) {
@@ -1170,6 +1330,7 @@ async function leaveToHome(message = '') {
   arrowController.reset()
   fruitController.reset()
   blockController.reset()
+  sliceController.reset()
   snakesGame = null
   ludoGame = null
   view = 'home'
@@ -1183,7 +1344,7 @@ function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
     button.addEventListener('click', async (event) => {
       event.preventDefault()
-      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' ? 'Keluar dari game? Progres sesi ini akan hilang.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' || view === 'slice-game' ? 'Keluar dari game? Jika kamu sudah masuk, progres terakhir bisa dilanjutkan nanti.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
       if (!isDemo && !await confirmLeave(message)) return
       void leaveToHome()
     }),

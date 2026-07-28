@@ -3,11 +3,11 @@ import {gameHeader} from '../../shared/ui'
 
 export function blockGameScreen(game: BlockBlastGame) {
   return `
-    ${gameHeader({title: 'Block Blast', className: 'block-header'})}
+    ${gameHeader({title: 'Blok Brak', className: 'block-header'})}
     <main id="main-content" class="block-shell">
       <section class="block-game-panel" aria-labelledby="block-title">
         <aside class="block-game-copy">
-          <p class="block-game-label">Block Blast</p>
+          <p class="block-game-label">Blok Brak</p>
           <h1 id="block-title">Isi. Hancurkan. Ulangi.</h1>
           <p class="block-objective">Susun tiga balok di papan. Baris atau kolom penuh akan langsung hilang.</p>
           <dl class="block-stats">
@@ -19,9 +19,9 @@ export function blockGameScreen(game: BlockBlastGame) {
           <button class="button button-secondary" data-restart-block type="button">Ulang game</button>
           <p class="block-session-note">Skor tersimpan jika kamu sudah masuk.</p>
         </aside>
-        <section class="block-play-area" aria-label="Area permainan Block Blast">
+        <section class="block-play-area" aria-label="Area permainan Blok Brak">
           <div class="block-board-wrap">
-            <div class="block-board" id="block-board" role="grid" tabindex="0" aria-label="Papan Block Blast 8 kali 8">${boardMarkup(game)}</div>
+            <div class="block-board" id="block-board" role="grid" tabindex="0" aria-label="Papan Blok Brak 8 kali 8">${boardMarkup(game)}</div>
             <div class="block-promo" role="status" aria-live="polite" aria-atomic="true"></div>
             <div class="block-result" role="dialog" aria-modal="true" aria-labelledby="block-result-title" ${game.status === 'over' ? '' : 'hidden'}>
               <p class="step-label">Tidak ada ruang</p>

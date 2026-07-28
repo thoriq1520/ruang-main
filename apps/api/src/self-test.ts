@@ -30,6 +30,19 @@ try {
   if (!cookie) throw new Error('sign up tidak menghasilkan session cookie')
 
   const authenticatedHeaders = {'content-type': 'application/json', cookie}
+  await expectStatus(await request('/api/solo-saves/arrow-puzzle', {
+    method: 'PUT',
+    headers: authenticatedHeaders,
+    body: JSON.stringify({state: {version: 1, elapsedMs: 1200, game: {level: 1}}}),
+  }), 200, 'save active game')
+  const activeSave = await expectStatus(await request('/api/solo-saves/arrow-puzzle', {headers: {cookie}}), 200, 'load active game')
+  if (!(await activeSave.json() as {data: {state: {version: number}}}).data?.state || (await request('/api/solo-saves/arrow-puzzle')).status !== 401) {
+    throw new Error('save game tidak terisolasi untuk user login')
+  }
+  await expectStatus(await request('/api/solo-saves/arrow-puzzle/archive', {method: 'POST', headers: {cookie}}), 200, 'archive active game')
+  const archivedSave = await expectStatus(await request('/api/solo-saves/arrow-puzzle', {headers: {cookie}}), 200, 'load archived game')
+  if ((await archivedSave.json() as {data: unknown}).data !== null) throw new Error('save yang diarsipkan masih aktif')
+
   await expectStatus(await request('/api/solo-runs', {
     method: 'POST',
     headers: authenticatedHeaders,
@@ -49,7 +62,7 @@ try {
   const leaderboardRows = (await leaderboard.json() as {data: Array<{name: string}>}).data
   if (!leaderboardRows.some((row) => row.name === 'Self Test')) throw new Error('leaderboard tidak memuat hasil self-test')
 
-  console.log('Self-test API, auth, database, history, dan leaderboard lulus.')
+  console.log('Self-test API, auth, database, save/continue, history, dan leaderboard lulus.')
 } finally {
   const pool = getPool()
   const user = await pool.query('select id from "user" where email = $1', [email]).catch(() => ({rows: []}))

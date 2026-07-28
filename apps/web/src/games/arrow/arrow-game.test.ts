@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {arrowTravel, createArrowGame, hintArrow, isArrowFree, releaseArrow, type ArrowGameState} from './arrow-game.ts'
+import {arrowTravel, createArrowGame, hintArrow, isArrowFree, releaseArrow, restoreArrowGame, saveArrowGame, type ArrowGameState} from './arrow-game.ts'
 
 test('setiap level buatan generator dapat diselesaikan', () => {
   for (let level = 1; level <= 24; level += 1) {
@@ -61,4 +61,14 @@ test('petunjuk memilih panah yang dapat keluar', () => {
 
 test('level yang sama dibuat deterministik', () => {
   assert.deepEqual(createArrowGame(5), createArrowGame(5))
+})
+
+test('save Arrow memulihkan papan dan durasi', () => {
+  const original = createArrowGame(3)
+  const free = original.arrows.find((arrow) => isArrowFree(original, arrow.id))!
+  const state = releaseArrow(original, free.id)
+  const restored = restoreArrowGame(saveArrowGame(state, 12_345))
+
+  assert.deepEqual(restored?.game, state)
+  assert.equal(restored?.elapsedMs, 12_345)
 })

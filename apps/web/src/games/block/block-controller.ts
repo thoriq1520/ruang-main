@@ -1,14 +1,21 @@
-import {submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
 import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {BlockBlastGame, blockPieceSize, type BlockPiece, type BlockPlacement} from './block-game'
 import {BLOCK_BOARD_SIZE, blockGameScreen, centeredPlacement} from './block-view'
+import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
 
 export function createBlockController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: BlockBlastGame | null = null
   let startedAt = 0
   let submitted = false
   let comboTimer: number | null = null
+  let authenticated = false
+  let startToken = 0
+
+  const persist = () => {
+    if (authenticated && game?.status === 'playing') void saveSoloGame('block-blast', game.toSave(performance.now() - startedAt))
+  }
 
   const showMoveEffect = (move: BlockPlacement) => {
     if (!move.clearedCells.length) return
@@ -42,14 +49,18 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
 
   const render = (move?: BlockPlacement) => {
     if (!game) return start()
-    updateDocumentMeta('Main Block Blast Gratis | Ruang Main', 'Main Block Blast gratis langsung dari browser. Susun balok warna-warni, bersihkan baris dan kolom, lalu kejar skor tertinggi.', '/game/block-blast')
+    updateDocumentMeta('Main Blok Brak Gratis | Ruang Main', 'Main Blok Brak gratis langsung dari browser. Susun balok warna-warni, bersihkan baris dan kolom, lalu kejar skor tertinggi.', '/game/block-blast')
     root.innerHTML = blockGameScreen(game)
     bindLeaveButtons()
     bindInteraction()
-    if (move) showMoveEffect(move)
-    root.querySelectorAll('[data-restart-block]').forEach((button) => button.addEventListener('click', start))
+    if (move) {
+      persist()
+      showMoveEffect(move)
+    }
+    root.querySelectorAll('[data-restart-block]').forEach((button) => button.addEventListener('click', () => void startFresh()))
     if (game.status === 'over' && !submitted) {
       submitted = true
+      if (authenticated) void archiveSoloGame('block-blast')
       void submitSoloRun({gameId: 'block-blast', result: 'lost', score: game.score, linesCleared: game.linesCleared, durationMs: Math.round(performance.now() - startedAt)})
     }
   }
@@ -193,13 +204,40 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
     })
   }
 
-  const start = () => {
+  const startFresh = async () => {
+    if (authenticated) await archiveSoloGame('block-blast').catch(() => false)
     if (comboTimer !== null) window.clearTimeout(comboTimer)
     comboTimer = null
     game = new BlockBlastGame()
     startedAt = performance.now()
     submitted = false
+    persist()
     render()
+  }
+
+  const start = () => {
+    const token = ++startToken
+    if (comboTimer !== null) window.clearTimeout(comboTimer)
+    comboTimer = null
+    root.innerHTML = soloSaveLoadingScreen('Blok Brak')
+    void prepareSoloStart('block-blast', 'Blok Brak').then(async (prepared) => {
+      if (token !== startToken) return
+      authenticated = prepared.authenticated
+      const restored = prepared.state ? BlockBlastGame.fromSave(prepared.state) : null
+      if (prepared.state && !restored && authenticated) await archiveSoloGame('block-blast').catch(() => false)
+      if (token !== startToken) return
+      if (restored) {
+        game = restored.game
+        startedAt = performance.now() - restored.elapsedMs
+        submitted = false
+      } else {
+        game = new BlockBlastGame()
+        startedAt = performance.now()
+        submitted = false
+      }
+      persist()
+      render()
+    })
   }
 
   return {
@@ -209,8 +247,10 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
     reset() {
       if (comboTimer !== null) window.clearTimeout(comboTimer)
       comboTimer = null
+      startToken += 1
       game = null
       submitted = false
+      authenticated = false
     },
   }
 }

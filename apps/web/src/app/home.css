@@ -25,6 +25,7 @@
 .game-shelf .game-card-snakes,
 .game-shelf .game-card-ludo-board,
 .game-shelf .game-card-fruit,
+.game-shelf .game-card-slice,
 .game-shelf .game-card-blocks { min-height: 0; border-width: 1px; border-radius: 7px; }
 .play-dock { padding: clamp(22px, 3vw, 34px); display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); align-items: center; gap: clamp(28px, 6vw, 72px); border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
 .play-summary { min-width: 0; display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: start; gap: 20px; }
