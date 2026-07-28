@@ -54,12 +54,33 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
       game.setAim((clientX - rectangle.left) / rectangle.width * FRUIT_BOARD_WIDTH)
     }
 
-    canvas.addEventListener('pointermove', (event) => {
-      if (event.pointerType === 'mouse') setAimFromPointer(event.clientX)
-    })
+    let dragPointerId: number | null = null
     canvas.addEventListener('pointerdown', (event) => {
+      if (!event.isPrimary || event.button !== 0 || dragPointerId !== null) return
+      event.preventDefault()
+      dragPointerId = event.pointerId
+      canvas.setPointerCapture(event.pointerId)
+      canvas.classList.add('is-dragging')
       setAimFromPointer(event.clientX)
+    })
+    canvas.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== dragPointerId) return
+      event.preventDefault()
+      setAimFromPointer(event.clientX)
+    })
+    canvas.addEventListener('pointerup', (event) => {
+      if (event.pointerId !== dragPointerId) return
+      event.preventDefault()
+      setAimFromPointer(event.clientX)
+      dragPointerId = null
+      canvas.classList.remove('is-dragging')
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
       dropCurrentFruit()
+    })
+    canvas.addEventListener('pointercancel', (event) => {
+      if (event.pointerId !== dragPointerId) return
+      dragPointerId = null
+      canvas.classList.remove('is-dragging')
     })
     canvas.addEventListener('keydown', (event) => {
       if (!game) return

@@ -11,6 +11,14 @@ test('buah yang dijatuhkan tetap berada di dalam wadah', () => {
   assert.equal(game.fruits[1].x, FRUIT_BOARD_WIDTH - fruitSpecs[0].radius - 5)
 })
 
+test('buah jatuh di posisi terakhir setelah bidikan digeser', () => {
+  const game = new FruitMergeGame(() => 0)
+  game.setAim(120)
+  game.setAim(318)
+  assert.equal(game.drop(), true)
+  assert.equal(game.fruits[0].x, 318)
+})
+
 test('dua buah sejenis bergabung menjadi buah berikutnya dan menambah skor', () => {
   const game = new FruitMergeGame(() => 0)
   game.spawn(1, 210, 300).age = 1

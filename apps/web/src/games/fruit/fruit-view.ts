@@ -24,12 +24,12 @@ export function fruitGameScreen(game: FruitMergeGame) {
           </div>
           <div class="fruit-rule">
             <strong>Cara bermain</strong>
-            <p>Geser penunjuk, lalu ketuk papan. Tumpukan yang melewati garis merah akan mengakhiri permainan.</p>
+            <p>Tekan dan tahan buah, geser ke posisi yang kamu mau, lalu lepaskan untuk menjatuhkannya. Tumpukan yang melewati garis merah akan mengakhiri permainan.</p>
           </div>
           <p class="fruit-session-note">Skor tersimpan jika kamu sudah masuk.</p>
         </aside>
         <section class="fruit-board-wrap" aria-label="Area permainan Fruit Merge">
-          <canvas id="fruit-canvas" class="fruit-canvas" width="${FRUIT_BOARD_WIDTH}" height="${FRUIT_BOARD_HEIGHT}" tabindex="0" role="button" aria-label="Papan Fruit Merge. Gunakan tombol kiri dan kanan untuk menggeser buah, lalu Enter untuk menjatuhkan."></canvas>
+          <canvas id="fruit-canvas" class="fruit-canvas" width="${FRUIT_BOARD_WIDTH}" height="${FRUIT_BOARD_HEIGHT}" tabindex="0" role="button" aria-label="Papan Fruit Merge. Tekan dan tahan untuk menggeser buah, lalu lepaskan untuk menjatuhkan. Gunakan tombol kiri dan kanan serta Enter jika memakai keyboard."></canvas>
           <div class="fruit-result" id="fruit-result" role="dialog" aria-modal="true" aria-labelledby="fruit-result-title" hidden>
             <p class="step-label">Wadah penuh</p>
             <h2 id="fruit-result-title">Skor <span id="fruit-final-score">0</span></h2>
