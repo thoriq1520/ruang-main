@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {addLudoPlayer, createLudoLobby, globalTrackIndex, movableLudoTokens, moveLudoToken, rollLudo, setLudoColor, startLudo, type LudoState} from './ludo-game.ts'
+import {addLudoPlayer, createLudoLobby, globalTrackIndex, ludoHomeCells, movableLudoTokens, moveLudoToken, rollLudo, setLudoColor, startLudo, type LudoState} from './ludo-game.ts'
 
 function readyGame() {
   let state = addLudoPlayer(createLudoLobby('a', 'Thoriq'), 'b', 'Sari')
@@ -16,6 +16,13 @@ test('warna harus unik dan semua pemain memilih warna sebelum mulai', () => {
   assert.equal(startLudo(state, 'a'), state)
   state = setLudoColor(state, 'b', 'blue')
   assert.equal(startLudo(state, 'a').phase, 'playing')
+})
+
+test('orientasi papan mengikuti susunan biru, kuning, merah, hijau', () => {
+  assert.deepEqual(ludoHomeCells.blue[0], [7, 1])
+  assert.deepEqual(ludoHomeCells.yellow[0], [1, 7])
+  assert.deepEqual(ludoHomeCells.red[0], [13, 7])
+  assert.deepEqual(ludoHomeCells.green[0], [7, 13])
 })
 
 test('pion hanya dapat keluar dari markas dengan angka enam', () => {
@@ -59,4 +66,3 @@ test('pion sendiri tidak boleh menempati petak non-safe yang sama', () => {
   assert.ok(!movable.includes(1), 'pion 1 tidak bisa ke petak yang sudah ada pion sendiri (non-safe)')
   assert.ok(movable.includes(0), 'pion 0 tetap bisa bergerak ke petak lain')
 })
-

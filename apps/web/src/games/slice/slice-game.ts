@@ -50,7 +50,7 @@ export class FruitSliceGame {
   endReason: 'missed' | 'bomb' | null = null
   private nextLifeAt = 100
   private nextId = 1
-  private spawnIn = .55
+  private spawnIn = 1.1
   private wave = 0
   private readonly random: () => number
 
@@ -66,7 +66,7 @@ export class FruitSliceGame {
 
     let misses = 0
     for (const target of this.targets) {
-      target.vy += 820 * elapsed
+      target.vy += 720 * elapsed
       target.x += target.vx * elapsed
       target.y += target.vy * elapsed
       target.rotation += target.spin * elapsed
@@ -162,7 +162,7 @@ export class FruitSliceGame {
 
   private spawnWave() {
     this.wave += 1
-    const fruitCount = 1 + Math.floor(this.random() * Math.min(4, 2 + Math.floor(this.score / 35)))
+    const fruitCount = this.wave <= 3 ? 1 : 1 + Math.floor(this.random() * Math.min(4, 2 + Math.floor(this.score / 35)))
     for (let index = 0; index < fruitCount; index += 1) this.spawnFruit(index, fruitCount)
     if (this.score >= 8 && this.random() < Math.min(.25, .1 + this.score / 900)) this.spawnBomb()
     this.spawnIn = Math.max(.52, 1.18 - this.score * .006) + this.random() * .42
@@ -187,7 +187,7 @@ export class FruitSliceGame {
     return {
       id: this.nextId++, kind, x, y: SLICE_HEIGHT + radius,
       vx: centerPull + (this.random() - .5) * 170,
-      vy: -760 - this.random() * 190,
+      vy: -920 - this.random() * 180,
       radius, rotation: this.random() * Math.PI * 2,
       spin: (this.random() - .5) * 4,
       sliced: false, cutAge: 0, cutAngle: 0,

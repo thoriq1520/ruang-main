@@ -3,6 +3,7 @@ import './app/home.css'
 import './games/fruit/fruit.css'
 import './games/block/block.css'
 import './games/slice/slice.css'
+import './games/bottles/bottles.css'
 import './app/redesign.css'
 import {cardById, chanceCards, communityCards, type CardDeck, type CardEffect} from './games/monopoly/cards'
 import {
@@ -49,6 +50,7 @@ import {createArrowController} from './games/arrow/arrow-controller'
 import {createFruitController} from './games/fruit/fruit-controller'
 import {createBlockController} from './games/block/block-controller'
 import {createSliceController} from './games/slice/slice-controller'
+import {createBottlesController} from './games/bottles/bottles-controller'
 import {homeScreen} from './app/home-view'
 import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
 import {bindAccountUi} from './auth/account-controller'
@@ -65,7 +67,7 @@ let isDemo = false
 const requestedGameId = new URLSearchParams(location.search).get('game')
 let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'slice-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'slice-game' | 'bottles-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
@@ -80,6 +82,7 @@ const arrowController = createArrowController(app, bindLeaveButtons)
 const fruitController = createFruitController(app, bindLeaveButtons)
 const blockController = createBlockController(app, bindLeaveButtons)
 const sliceController = createSliceController(app, bindLeaveButtons)
+const bottlesController = createBottlesController(app, bindLeaveButtons)
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
 if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
@@ -87,7 +90,7 @@ if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.repl
 render()
 if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('demo')) openDemo()
 window.addEventListener('popstate', () => {
-  if (!game && !arrowController.active && !fruitController.active && !blockController.active && !sliceController.active && !snakesGame && !ludoGame && view === 'home') render()
+  if (!game && !arrowController.active && !fruitController.active && !blockController.active && !sliceController.active && !bottlesController.active && !snakesGame && !ludoGame && view === 'home') render()
 })
 
 function render() {
@@ -112,6 +115,7 @@ function render() {
   else if (view === 'fruit-game') fruitController.render()
   else if (view === 'block-game') blockController.render()
   else if (view === 'slice-game') sliceController.render()
+  else if (view === 'bottles-game') bottlesController.render()
   else if (view === 'snakes-lobby') renderSnakesLobby()
   else if (view === 'snakes-game') renderSnakesGame()
   else if (view === 'ludo-lobby') renderLudoLobby()
@@ -134,7 +138,7 @@ function renderHome() {
   }))
 
   if (isSolo) {
-    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : selectedGameId === 'fruit-slice' ? startSliceGame : startArrowGame)
+    document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : selectedGameId === 'fruit-slice' ? startSliceGame : selectedGameId === 'magic-bottles' ? startBottlesGame : startArrowGame)
     return
   }
 
@@ -184,6 +188,7 @@ function startArrowGame() {
   fruitController.reset()
   blockController.reset()
   sliceController.reset()
+  bottlesController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -198,6 +203,7 @@ function startFruitGame() {
   arrowController.reset()
   blockController.reset()
   sliceController.reset()
+  bottlesController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -212,6 +218,7 @@ function startBlockGame() {
   arrowController.reset()
   fruitController.reset()
   sliceController.reset()
+  bottlesController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -226,6 +233,7 @@ function startSliceGame() {
   arrowController.reset()
   fruitController.reset()
   blockController.reset()
+  bottlesController.reset()
   game = null
   snakesGame = null
   ludoGame = null
@@ -233,6 +241,21 @@ function startSliceGame() {
   homeNotice = ''
   view = 'slice-game'
   sliceController.start()
+  window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function startBottlesGame() {
+  arrowController.reset()
+  fruitController.reset()
+  blockController.reset()
+  sliceController.reset()
+  game = null
+  snakesGame = null
+  ludoGame = null
+  network = null
+  homeNotice = ''
+  view = 'bottles-game'
+  bottlesController.start()
   window.scrollTo({top: 0, behavior: 'auto'})
 }
 
@@ -566,6 +589,7 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
   if (selectedGameId === 'fruit-merge') return startFruitGame()
   if (selectedGameId === 'block-blast') return startBlockGame()
   if (selectedGameId === 'fruit-slice') return startSliceGame()
+  if (selectedGameId === 'magic-bottles') return startBottlesGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -707,6 +731,7 @@ function openDemo() {
   if (selectedGameId === 'fruit-merge') return startFruitGame()
   if (selectedGameId === 'block-blast') return startBlockGame()
   if (selectedGameId === 'fruit-slice') return startSliceGame()
+  if (selectedGameId === 'magic-bottles') return startBottlesGame()
   activeGameId = selectedGameId
   if (activeGameId === 'ludo') {
     ludoGame = createLudoDemo()
@@ -1006,17 +1031,21 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
       })
     }
 
+    piece.style.transform = String(frames[0].transform)
     piece.classList.add('is-board-moving')
-    const animation = piece.animate(frames, {
-      duration: Math.max(400, segments * 180),
-      easing: 'linear',
-      fill: 'both',
+    requestAnimationFrame(() => {
+      const animation = piece.animate(frames, {
+        duration: Math.max(400, segments * 180),
+        easing: 'ease-in-out',
+        fill: 'both',
+      })
+      piece.style.transform = ''
+      const cleanUp = () => {
+        animation.cancel()
+        piece.classList.remove('is-board-moving')
+      }
+      void animation.finished.then(cleanUp, cleanUp)
     })
-    const cleanUp = () => {
-      animation.cancel()
-      piece.classList.remove('is-board-moving')
-    }
-    void animation.finished.then(cleanUp, cleanUp)
     return
   }
 
@@ -1027,10 +1056,8 @@ function animateSnakesMove(move: SnakeMove, origin: ScreenPoint | null) {
   piece.style.transform = `translate3d(${startPoint.x - finalTarget.x}px, ${startPoint.y - finalTarget.y}px, 0)`
   piece.classList.add('is-board-moving')
 
-  // Use rAF to ensure the inline style above paints before starting the Web Animation
+  // Paint the origin pin before the Web Animation takes over.
   requestAnimationFrame(() => {
-    // Clear the inline pin — the Web Animation will take over
-    piece.style.transform = ''
     runSnakesTimeline(piece, finalTarget, move, walkPoints)
   })
 }
@@ -1167,9 +1194,10 @@ function runSnakesTimeline(
 
   const animation = piece.animate(frames, {
     duration: totalTime,
-    easing: 'linear',
+    easing: 'ease-in-out',
     fill: 'both',
   })
+  piece.style.transform = ''
 
   const cleanUp = () => {
     animation.cancel()
@@ -1408,6 +1436,7 @@ async function leaveToHome(message = '') {
   fruitController.reset()
   blockController.reset()
   sliceController.reset()
+  bottlesController.reset()
   snakesGame = null
   ludoGame = null
   view = 'home'
@@ -1421,7 +1450,7 @@ function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
     button.addEventListener('click', async (event) => {
       event.preventDefault()
-      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' || view === 'slice-game' ? 'Keluar dari game? Jika kamu sudah masuk, progres terakhir bisa dilanjutkan nanti.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' || view === 'slice-game' || view === 'bottles-game' ? 'Keluar dari game? Jika kamu sudah masuk, progres terakhir bisa dilanjutkan nanti.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
       if (!isDemo && !await confirmLeave(message)) return
       void leaveToHome()
     }),

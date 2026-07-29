@@ -46,21 +46,30 @@ try {
   await expectStatus(await request('/api/solo-runs', {
     method: 'POST',
     headers: authenticatedHeaders,
-    body: JSON.stringify({gameId: 'arrow-puzzle', result: 'won', level: 2, moves: 18, mistakes: 1, durationMs: 24_000}),
+    body: JSON.stringify({gameId: 'arrow-puzzle', result: 'lost', level: 2, moves: 18, mistakes: 1, durationMs: 24_000}),
   }), 201, 'save arrow run')
   await expectStatus(await request('/api/solo-runs', {
     method: 'POST',
     headers: authenticatedHeaders,
     body: JSON.stringify({gameId: 'fruit-merge', result: 'lost', score: 480, largestKind: 4, durationMs: 42_000}),
   }), 201, 'save fruit run')
+  await expectStatus(await request('/api/solo-runs', {
+    method: 'POST',
+    headers: authenticatedHeaders,
+    body: JSON.stringify({gameId: 'fruit-slice', result: 'lost', score: 75, bestCombo: 4, fruitsSliced: 60, durationMs: 30_000}),
+  }), 201, 'save fruit slice run')
 
   const history = await expectStatus(await request('/api/me/solo-runs', {headers: {cookie}}), 200, 'history')
   const historyRows = (await history.json() as {data: unknown[]}).data
-  if (historyRows.length !== 2) throw new Error(`history: expected 2 rows, received ${historyRows.length}`)
+  if (historyRows.length !== 3) throw new Error(`history: expected 3 rows, received ${historyRows.length}`)
 
   const leaderboard = await expectStatus(await request('/api/leaderboards/arrow-puzzle'), 200, 'leaderboard')
   const leaderboardRows = (await leaderboard.json() as {data: Array<{name: string}>}).data
   if (!leaderboardRows.some((row) => row.name === 'Self Test')) throw new Error('leaderboard tidak memuat hasil self-test')
+
+  const sliceLeaderboard = await expectStatus(await request('/api/leaderboards/fruit-slice'), 200, 'fruit slice leaderboard')
+  const sliceLeaderboardRows = (await sliceLeaderboard.json() as {data: Array<{name: string}>}).data
+  if (!sliceLeaderboardRows.some((row) => row.name === 'Self Test')) throw new Error('leaderboard Tebas Buah tidak memuat hasil self-test')
 
   console.log('Self-test API, auth, database, save/continue, history, dan leaderboard lulus.')
 } finally {

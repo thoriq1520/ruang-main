@@ -39,13 +39,13 @@ export const ludoTrackCells = [
 ] as const
 
 export const ludoHomeCells: Record<LudoColor, readonly (readonly [number, number])[]> = {
-  red: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]],
-  blue: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7]],
+  blue: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]],
+  yellow: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7]],
   green: [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9], [7, 8]],
-  yellow: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [8, 7]],
+  red: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [8, 7]],
 }
 
-const colorOffsets: Record<LudoColor, number> = {red: 0, blue: 13, green: 26, yellow: 39}
+const colorOffsets: Record<LudoColor, number> = {blue: 0, yellow: 13, green: 26, red: 39}
 const safeTrackCells = new Set([0, 8, 13, 21, 26, 34, 39, 47])
 
 export function createLudoLobby(hostId: string, hostName: string): LudoState {

@@ -2,9 +2,9 @@ import {describe, expect, test} from 'bun:test'
 import {normalizeRun} from './runs'
 
 describe('normalisasi hasil solo', () => {
-  test('skor Arrow dihitung oleh server', () => {
-    const run = normalizeRun({gameId: 'arrow-puzzle', result: 'won', level: 3, moves: 20, mistakes: 1, durationMs: 30_000, score: 9_999_999})
-    expect(run.score).toBe(345_970)
+  test('skor sesi Arrow dihitung dari level terakhir', () => {
+    const run = normalizeRun({gameId: 'arrow-puzzle', result: 'lost', level: 3, moves: 20, mistakes: 1, durationMs: 30_000, score: 9_999_999})
+    expect(run.score).toBe(200_000)
     expect(run.stats).toEqual({moves: 20, mistakes: 1})
   })
 
@@ -24,6 +24,13 @@ describe('normalisasi hasil solo', () => {
     const run = normalizeRun({gameId: 'fruit-slice', result: 'lost', score: 860, bestCombo: 7, fruitsSliced: 412, durationMs: 90_000})
     expect(run.score).toBe(860)
     expect(run.stats).toEqual({bestCombo: 7, fruitsSliced: 412})
+  })
+
+  test('Botol Warna memberi skor dari level dan efisiensi langkah', () => {
+    const run = normalizeRun({gameId: 'magic-bottles', result: 'won', level: 10, moves: 120, durationMs: 90_000})
+    expect(run.result).toBe('won')
+    expect(run.score).toBe(1_037_910)
+    expect(run.stats).toEqual({moves: 120})
   })
 
   test('nilai yang tidak masuk akal ditolak', () => {

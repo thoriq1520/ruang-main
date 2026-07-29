@@ -1,6 +1,6 @@
 import type {Pool} from 'pg'
 
-export const soloGameIds = ['arrow-puzzle', 'fruit-merge', 'block-blast', 'fruit-slice'] as const
+export const soloGameIds = ['arrow-puzzle', 'fruit-merge', 'block-blast', 'fruit-slice', 'magic-bottles'] as const
 export type SoloGameId = typeof soloGameIds[number]
 export type RunResult = 'won' | 'lost'
 
@@ -48,6 +48,13 @@ export function normalizeRun(input: RunSubmission): NormalizedRun {
     return {gameId: input.gameId, result: 'lost', score, level: null, durationMs, stats: {bestCombo, fruitsSliced}}
   }
 
+  if (input.gameId === 'magic-bottles') {
+    const level = boundedInteger(input.level, 'level', 1, 10)
+    const moves = boundedInteger(input.moves, 'moves', 1, 100_000)
+    const score = level * 100_000 + Math.max(0, 50_000 - moves * 100 - Math.floor(durationMs / 1_000))
+    return {gameId: input.gameId, result: 'won', score, level, durationMs, stats: {moves}}
+  }
+
   const level = boundedInteger(input.level, 'level', 1, 10_000)
   const moves = boundedInteger(input.moves, 'moves', 1, 100_000)
   const mistakes = boundedInteger(input.mistakes, 'mistakes', 0, moves)
@@ -78,7 +85,9 @@ export class RunRepository {
   async history(userId: string, limit = 20) {
     const result = await this.pool.query(
       `select id, game_id, result, score::double precision as score, level, duration_ms, stats, created_at
-       from solo_runs where user_id = $1 order by created_at desc limit $2`,
+       from solo_runs
+       where user_id = $1 and (game_id <> 'arrow-puzzle' or result = 'lost')
+       order by created_at desc limit $2`,
       [userId, limit],
     )
     return result.rows.map(mapRun)
@@ -91,7 +100,7 @@ export class RunRepository {
               row_number() over (order by r.score desc, r.duration_ms asc, r.created_at asc)::integer as rank
        from solo_runs r
        join "user" u on u.id = r.user_id
-       where r.game_id = $1 and ($1 in ('fruit-merge', 'block-blast', 'fruit-slice') or r.result = 'won')
+       where r.game_id = $1 and (r.result = 'lost' or r.game_id = 'magic-bottles')
        order by r.score desc, r.duration_ms asc, r.created_at asc
        limit $2`,
       [gameId, limit],

@@ -117,7 +117,7 @@ async function renderSignedIn(dialog: HTMLDialogElement, user: {name: string; em
   const target = content(dialog).querySelector<HTMLElement>('[data-history]')!
   try {
     const rows = await soloHistory()
-    const gameNames = {'arrow-puzzle': 'Arrow Puzzle', 'fruit-merge': 'Fruit Merge', 'block-blast': 'Blok Brak', 'fruit-slice': 'Tebas Buah'} as const
+    const gameNames = {'arrow-puzzle': 'Arrow Puzzle', 'fruit-merge': 'Fruit Merge', 'block-blast': 'Blok Brak', 'fruit-slice': 'Tebas Buah', 'magic-bottles': 'Botol Warna'} as const
     target.innerHTML = rows.length ? rows.map((run) => `<div class="history-row"><div><strong>${gameNames[run.gameId]}</strong><span>${new Date(run.createdAt).toLocaleDateString('id-ID')}</span></div><strong>${run.score.toLocaleString('id-ID')}</strong></div>`).join('') : '<p class="muted">Belum ada hasil solo yang tersimpan.</p>'
   } catch (error) {
     target.innerHTML = `<p class="form-error">${escapeHtml(error instanceof Error ? error.message : 'Riwayat belum dapat dimuat.')}</p>`
@@ -128,8 +128,8 @@ async function renderRankings(dialog: HTMLDialogElement) {
   const target = content(dialog)
   target.innerHTML = '<p class="muted">Memuat peringkat…</p>'
   try {
-    const [arrow, fruit, block, slice] = await Promise.all([leaderboard('arrow-puzzle'), leaderboard('fruit-merge'), leaderboard('block-blast'), leaderboard('fruit-slice')])
-    target.innerHTML = `<div class="ranking-columns">${rankingTable('Arrow Puzzle', arrow)}${rankingTable('Fruit Merge', fruit)}${rankingTable('Blok Brak', block)}${rankingTable('Tebas Buah', slice)}</div>`
+    const [arrow, fruit, block, slice, bottles] = await Promise.all([leaderboard('arrow-puzzle'), leaderboard('fruit-merge'), leaderboard('block-blast'), leaderboard('fruit-slice'), leaderboard('magic-bottles')])
+    target.innerHTML = `<div class="ranking-columns">${rankingTable('Arrow Puzzle', arrow)}${rankingTable('Fruit Merge', fruit)}${rankingTable('Blok Brak', block)}${rankingTable('Tebas Buah', slice)}${rankingTable('Botol Warna', bottles)}</div>`
   } catch (error) {
     target.innerHTML = `<p class="form-error">${escapeHtml(error instanceof Error ? error.message : 'Peringkat belum dapat dimuat.')}</p>`
   }

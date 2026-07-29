@@ -158,7 +158,7 @@ export function createSliceController(root: HTMLElement, bindLeaveButtons: () =>
       bestCombo.textContent = game.bestCombo ? `×${game.bestCombo}` : '-'
       if (game.lives < previousLives && game.status === 'playing') showPromo('Terlewat', `${game.lives} nyawa tersisa`)
       previousLives = game.lives
-      if (authenticated && game.status === 'playing' && time - lastSaveAt >= 1_200) persist()
+      if (authenticated && game.status === 'playing' && time - lastSaveAt >= 4_000) persist()
       if (game.status === 'over') {
         result.hidden = false
         resultLabel.textContent = game.endReason === 'bomb' ? 'Bom tersentuh' : 'Tiga buah terlewat'

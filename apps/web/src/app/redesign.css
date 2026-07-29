@@ -185,7 +185,8 @@ h3,
 .game-shelf .game-card-ludo,
 .game-shelf .game-card-fruit-merge,
 .game-shelf .game-card-fruit-slice,
-.game-shelf .game-card-block-blast {
+.game-shelf .game-card-block-blast,
+.game-shelf .game-card-magic-bottles {
   transform: none;
 }
 

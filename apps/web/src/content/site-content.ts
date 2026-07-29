@@ -2,9 +2,9 @@ export type PublicPageSlug = 'tentang' | 'cara-bermain' | 'faq' | 'kontak' | 'pr
 
 export const siteMeta = {
   name: 'Ruang Main',
-  alternateName: 'Mini Games Coop',
-  title: 'Ruang Main - Mini Game Browser Gratis',
-  description: 'Main Tebas Buah, Blok Brak, Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk save dan peringkat solo.',
+  alternateName: ['Mini Games Coop', 'ruangmain.web.id'],
+  title: 'Mini Games Coop - Main Langsung dari Browser | Ruang Main',
+  description: 'Main Botol Warna, Tebas Buah, Blok Brak, Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk save dan peringkat solo.',
 } as const
 
 export type FaqItem = {
@@ -36,7 +36,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Game apa yang tersedia?',
-    answer: 'Tersedia Kota Raya, Ular Tangga, Ludo, Arrow Puzzle, Fruit Merge, Tebas Buah, dan Blok Brak. Game dapat dimainkan sendiri atau melalui room privat sesuai modenya.',
+    answer: 'Tersedia Kota Raya, Ular Tangga, Ludo, Arrow Puzzle, Fruit Merge, Tebas Buah, Blok Brak, dan Botol Warna. Game dapat dimainkan sendiri atau melalui room privat sesuai modenya.',
   },
   {
     question: 'Apakah Ruang Main gratis?',
@@ -70,13 +70,13 @@ export const faqItems: FaqItem[] = [
 
 export const publicPages: Record<PublicPageSlug, PublicPage> = {
   tentang: {
-    title: 'Game di Ruang Main',
+    title: 'Tentang Mini Games Coop',
     description: 'Ruang Main adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi. Akun bersifat opsional.',
     sections: [
       {
         heading: 'Solo atau bersama teman',
         paragraphs: [
-          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle, Fruit Merge, Tebas Buah, dan Blok Brak adalah game solo dengan save, riwayat hasil, dan peringkat opsional.',
+          'Kota Raya, Ular Tangga, dan Ludo dimainkan bersama melalui room privat. Arrow Puzzle, Fruit Merge, Tebas Buah, Blok Brak, dan Botol Warna adalah game solo dengan save, riwayat hasil, dan peringkat opsional.',
           'Setiap game tetap dapat dibuka tanpa registrasi. Akun hanya diperlukan jika pemain ingin mencatat hasil solo.',
         ],
       },

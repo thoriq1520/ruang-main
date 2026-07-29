@@ -2,13 +2,24 @@ import {globalTrackIndex, ludoColorNames, ludoColors, ludoHomeCells, ludoTrackCe
 import {copyIcon, dieView, escapeHtml, gameHeader, initial} from '../../shared/ui'
 
 const baseTokenCells: Record<LudoColor, readonly (readonly [number, number])[]> = {
-  red: [[1, 1], [1, 4], [4, 1], [4, 4]],
-  blue: [[1, 10], [1, 13], [4, 10], [4, 13]],
+  blue: [[1, 1], [1, 4], [4, 1], [4, 4]],
+  yellow: [[1, 10], [1, 13], [4, 10], [4, 13]],
   green: [[10, 10], [10, 13], [13, 10], [13, 13]],
-  yellow: [[10, 1], [10, 4], [13, 1], [13, 4]],
+  red: [[10, 1], [10, 4], [13, 1], [13, 4]],
 }
 
-const startSafeIndices = [0, 13, 26, 39] as const
+const startSafeCells: Partial<Record<number, LudoColor>> = {
+  0: 'blue',
+  13: 'yellow',
+  26: 'green',
+  39: 'red',
+}
+const entryArrowCells: Partial<Record<number, {color: LudoColor; arrow: string}>> = {
+  51: {color: 'blue', arrow: '→'},
+  11: {color: 'yellow', arrow: '↓'},
+  24: {color: 'green', arrow: '←'},
+  37: {color: 'red', arrow: '↑'},
+}
 const extraSafeIndices = [8, 21, 34, 47] as const
 
 export function ludoLobbyScreen(state: LudoState | null, roomCode: string, host: boolean, localPeerId: string) {
@@ -56,17 +67,18 @@ export function ludoGameScreen(state: LudoState, roomCode: string, canRoll: bool
       </aside>
       <section class="ludo-board-wrap" aria-label="Papan Ludo">
         <div class="ludo-board">
-          ${ludoColors.map((color) => `<div class="ludo-base color-${color}"><div></div><i></i><i></i><i></i><i></i></div>`).join('')}
+          ${ludoColors.map((color) => `<div class="ludo-base color-${color}" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`).join('')}
           ${ludoTrackCells.map(([row, column], index) => {
-            const startColorIndex = startSafeIndices.indexOf(index as any)
-            const isStart = startColorIndex !== -1
+            const startColor = startSafeCells[index]
+            const entry = entryArrowCells[index]
+            const isStart = Boolean(startColor)
             const isExtra = extraSafeIndices.includes(index as any)
-            const colorClass = isStart ? `color-${ludoColors[startColorIndex]}` : ''
-            const safeClass = isStart ? `is-safe is-start-safe ${colorClass}` : isExtra ? 'is-safe is-star-safe' : ''
-            const badge = isStart
-              ? '<span class="ludo-safe-mark circle" aria-hidden="true"></span>'
+            const colorClass = startColor ? `color-${startColor}` : entry ? `color-${entry.color}` : ''
+            const safeClass = isStart ? `is-safe is-start-safe ${colorClass}` : isExtra ? 'is-safe is-star-safe' : entry ? `is-entry ${colorClass}` : ''
+            const badge = entry
+              ? `<span class="ludo-safe-mark arrow" aria-hidden="true">${entry.arrow}</span>`
               : isExtra
-                ? '<span class="ludo-safe-mark star" aria-hidden="true">★</span>'
+                ? '<span class="ludo-safe-mark star" aria-hidden="true">☆</span>'
                 : ''
             return `<div class="ludo-cell ludo-track ${safeClass}" style="--row:${row + 1};--column:${column + 1}" aria-hidden="true">${badge}</div>`
           }).join('')}

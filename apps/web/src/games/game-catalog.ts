@@ -1,6 +1,6 @@
 import type {RoomGameId} from '../network/network'
 
-export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice'
+export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice' | 'magic-bottles'
 
 export type GameCatalogItem = {
   id: GameId
@@ -182,6 +182,29 @@ export const gameCatalog: readonly GameCatalogItem[] = [
       },
     ],
   },
+  {
+    id: 'magic-bottles',
+    slug: 'botol-warna',
+    name: 'Botol Warna',
+    playerLabel: 'SOLO',
+    genre: 'Puzzle warna',
+    description: 'Tuang lapisan cairan antarbotol sampai setiap botol hanya berisi satu warna.',
+    mode: 'solo',
+    seoTitle: 'Main Botol Warna Gratis | Ruang Main',
+    seoDescription: 'Main puzzle Botol Warna gratis di browser. Pindahkan cairan antarbotol, kelompokkan warna yang sama, dan selesaikan 10 level tanpa instalasi.',
+    guide: [
+      {
+        heading: 'Cara bermain Botol Warna',
+        paragraphs: ['Pilih botol sumber lalu botol tujuan. Seluruh warna teratas yang sama akan dituang selama tujuan masih memiliki ruang.'],
+        bullets: ['Tuang ke botol kosong atau warna yang sama', 'Gunakan dua botol kosong untuk mengatur ruang', 'Undo jika urutan tuangan kurang tepat', 'Rapikan semua warna untuk lanjut level'],
+      },
+      {
+        heading: 'Sepuluh level dalam satu sesi',
+        paragraphs: ['Jumlah warna bertambah bertahap. Pemain login dapat melanjutkan level yang belum selesai dan mencatat hasil sesi.'],
+        bullets: ['Kontrol ketuk untuk mobile dan desktop', 'Level selalu dapat diselesaikan', 'Save game untuk akun', 'Peringkat berdasarkan efisiensi langkah'],
+      },
+    ],
+  },
 ] as const
 
 export function gameById(id: GameId) {
@@ -201,7 +224,9 @@ export function gameCard(item: GameCatalogItem, selected: boolean) {
             ? '<span class="game-card-fruit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>'
             : item.id === 'fruit-slice'
               ? '<span class="game-card-slice" aria-hidden="true"><i></i><i></i><b></b><em></em><small></small><small></small><small></small></span>'
-              : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
+              : item.id === 'magic-bottles'
+                ? '<span class="game-card-bottles" aria-hidden="true"><i><b></b><b></b></i><i><b></b><b></b></i><i><b></b><b></b></i></span>'
+                : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
     <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>

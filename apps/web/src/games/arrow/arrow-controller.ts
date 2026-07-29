@@ -12,9 +12,9 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
   let authenticated = false
   let startToken = 0
 
-  const startLevel = (level = 1) => {
+  const startLevel = (level = 1, resetTimer = true) => {
     game = createArrowGame(level)
-    startedAt = performance.now()
+    if (resetTimer) startedAt = performance.now()
     submitted = false
   }
 
@@ -23,7 +23,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
   }
 
   const submitResult = (state: ArrowGameState) => {
-    if (submitted || state.status === 'playing') return
+    if (submitted || state.status !== 'lost') return
     submitted = true
     if (authenticated) void archiveSoloGame('arrow-puzzle')
     void submitSoloRun({gameId: 'arrow-puzzle', result: state.status, level: state.level, moves: state.moves, mistakes: state.mistakes, durationMs: Math.round(performance.now() - startedAt)})
@@ -82,7 +82,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     }))
     root.querySelector('#next-arrow-level')?.addEventListener('click', () => {
       if (!game) return
-      startLevel(game.level + 1)
+      startLevel(game.level + 1, false)
       persist()
       render()
     })

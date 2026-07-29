@@ -9,7 +9,7 @@ import {normalizeRun, RunRepository, soloGameIds} from './runs'
 import {normalizeSaveState, SaveRepository} from './saves'
 
 const runBody = t.Object({
-  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge'), t.Literal('block-blast'), t.Literal('fruit-slice')]),
+  gameId: t.Union([t.Literal('arrow-puzzle'), t.Literal('fruit-merge'), t.Literal('block-blast'), t.Literal('fruit-slice'), t.Literal('magic-bottles')]),
   result: t.Union([t.Literal('won'), t.Literal('lost')]),
   durationMs: t.Integer({minimum: 0, maximum: 86_400_000}),
   score: t.Optional(t.Integer()),

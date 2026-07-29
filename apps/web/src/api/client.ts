@@ -4,7 +4,7 @@ import type {App} from '@ruang-main/api'
 export const apiOrigin = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : location.origin)).replace(/\/$/, '')
 export const api = treaty<App>(apiOrigin, {fetch: {credentials: 'include'}})
 
-export type SoloGameId = 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice'
+export type SoloGameId = 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice' | 'magic-bottles'
 
 export type SoloRunSubmission = {
   gameId: SoloGameId
