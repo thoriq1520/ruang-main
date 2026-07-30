@@ -136,5 +136,5 @@ async function renderRankings(dialog: HTMLDialogElement) {
 }
 
 function rankingTable(title: string, rows: Awaited<ReturnType<typeof leaderboard>>) {
-  return `<section class="ranking-list"><h3>${title}</h3>${rows.length ? rows.slice(0, 10).map((row) => `<div class="ranking-row"><span>${row.rank}</span><strong>${escapeHtml(row.name)}</strong><b>${row.score.toLocaleString('id-ID')}</b></div>`).join('') : '<p class="muted">Belum ada skor.</p>'}</section>`
+  return `<section class="ranking-list"><h3>${title}</h3>${rows.length ? rows.slice(0, 5).map((row) => `<div class="ranking-row"><span>${row.rank}</span><strong>${escapeHtml(row.name)}</strong><b>${row.score.toLocaleString('id-ID')}</b></div>`).join('') : '<p class="muted">Belum ada skor.</p>'}</section>`
 }

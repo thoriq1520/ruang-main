@@ -93,7 +93,7 @@ export class RunRepository {
     return result.rows.map(mapRun)
   }
 
-  async leaderboard(gameId: SoloGameId, limit = 25) {
+  async leaderboard(gameId: SoloGameId, limit = 5) {
     const result = await this.pool.query(
       `select r.id, r.score::double precision as score, r.level, r.duration_ms, r.stats, r.created_at,
               u.id as user_id, u.name, u.image,

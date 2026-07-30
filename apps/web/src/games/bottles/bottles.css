@@ -25,22 +25,14 @@
 .bottle-glass b { position: absolute; z-index: 2; inset: auto 9px 7px; height: 5px; border-radius: 50%; background: rgba(22,58,48,.12); }
 .bottle-liquid { position: absolute; right: 0; bottom: calc(var(--layer) * 25%); left: 0; height: calc(25% + 1px); background: var(--liquid); box-shadow: inset 0 4px 0 rgba(255,255,255,.14); }
 .bottle-liquid.is-top { border-radius: 45% 45% 3px 3px / 8px 8px 3px 3px; }
-.bottle-button.is-pouring { animation: bottle-pour 520ms cubic-bezier(.3,.7,.2,1); }
-.bottle-button.is-receiving { animation: bottle-receive 420ms cubic-bezier(.2,.8,.2,1); }
+
 .bottles-hint { margin: 18px 0 0; color: var(--color-text-muted); font-size: .78rem; font-weight: 800; text-align: center; }
 .bottles-result { position: absolute; z-index: 4; inset: 50% auto auto 50%; width: min(calc(100% - 40px), 360px); padding: 26px; border: 2px solid var(--color-border-dark); border-radius: 12px; color: var(--color-ink); background: var(--color-paper); box-shadow: 6px 7px 0 rgba(7,17,13,.52); text-align: center; transform: translate(-50%, -50%); animation: bottles-result-in 360ms cubic-bezier(.16,1,.3,1) both; }
 .bottles-result h2 { margin: 6px 0 10px; font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif; font-size: 2rem; }
 .bottles-result p:not(.step-label) { margin: 0 0 18px; color: #536158; line-height: 1.5; }
 .bottles-result .button { width: 100%; }
 
-@keyframes bottle-pour {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  35%, 65% { transform: translate(18px,-28px) rotate(24deg); }
-}
-@keyframes bottle-receive {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.045); }
-}
+
 @keyframes bottles-result-in {
   from { opacity: 0; transform: translate(-50%, -46%) scale(.94); }
 }
