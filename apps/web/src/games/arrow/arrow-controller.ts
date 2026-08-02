@@ -2,7 +2,8 @@ import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {createArrowGame, hintArrow, isArrowFree, releaseArrow, restoreArrowGame, saveArrowGame, type ArrowGameState} from './arrow-game'
 import {arrowGameScreen} from './arrow-view'
-import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame} from '../../api/client'
+import {finishSoloRun} from '../../shared/solo-result'
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
 
 export function createArrowController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
@@ -26,7 +27,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
     if (submitted || state.status !== 'lost') return
     submitted = true
     if (authenticated) void archiveSoloGame('arrow-puzzle')
-    void submitSoloRun({gameId: 'arrow-puzzle', result: state.status, level: state.level, moves: state.moves, mistakes: state.mistakes, durationMs: Math.round(performance.now() - startedAt)})
+    void finishSoloRun({gameId: 'arrow-puzzle', result: state.status, level: state.level, moves: state.moves, mistakes: state.mistakes, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
   }
 
   const render = () => {
@@ -116,6 +117,7 @@ export function createArrowController(root: HTMLElement, bindLeaveButtons: () =>
 
   return {
     get active() { return game !== null },
+    snapshot: () => game ? saveArrowGame(game, performance.now() - startedAt) : null,
     start,
     render,
     reset() { startToken += 1; game = null; submitted = false; authenticated = false },

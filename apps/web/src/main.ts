@@ -36,7 +36,7 @@ import {
   type GameIntent,
   type GameState,
 } from './games/monopoly/game'
-import {connectRoom, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent} from './network/network'
+import {connectRoom, isSoloRoomGameId, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent, type SoloPeerSnapshot, type SoloRoomGameId} from './network/network'
 import {publicPageSlugs, type PublicPageSlug} from './content/site-content'
 import {gameById, gameCatalog, type GameId} from './games/game-catalog'
 import {copyIcon, dieView, escapeHtml, gameHeader, initial, requestAdSafely} from './shared/ui'
@@ -54,6 +54,8 @@ import {createBottlesController} from './games/bottles/bottles-controller'
 import {homeScreen} from './app/home-view'
 import {auctionOverlay, debtOverlay, jailActions, monopolyBoardCell, monopolyPlayerRow, resultOverlay, tradeForm, tradeOverlay} from './games/monopoly/monopoly-view'
 import {bindAccountUi} from './auth/account-controller'
+import type {GameController} from './shared/game-controller'
+import {renderSoloSpectator} from './games/solo-spectator'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let game: GameState | null = null
@@ -67,7 +69,7 @@ let isDemo = false
 const requestedGameId = new URLSearchParams(location.search).get('game')
 let selectedGameId: GameId = gameCatalog.some((item) => item.id === requestedGameId) ? requestedGameId as GameId : 'monopoly'
 let activeGameId: RoomGameId = 'monopoly'
-let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'slice-game' | 'bottles-game' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
+let view: 'home' | 'lobby' | 'game' | 'arrow-game' | 'fruit-game' | 'block-game' | 'slice-game' | 'bottles-game' | 'solo-room' | 'snakes-lobby' | 'snakes-game' | 'ludo-lobby' | 'ludo-game' = 'home'
 let homeNotice = ''
 let toastTimer = 0
 let isAnimatingPawn = false
@@ -83,6 +85,10 @@ const fruitController = createFruitController(app, bindLeaveButtons)
 const blockController = createBlockController(app, bindLeaveButtons)
 const sliceController = createSliceController(app, bindLeaveButtons)
 const bottlesController = createBottlesController(app, bindLeaveButtons)
+let soloRoomController: GameController | null = null
+let soloRoomClock = 0
+let soloRoomName = ''
+const soloPeers = new Map<string, {name: string; snapshot: SoloPeerSnapshot | null}>()
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
 if (legacyPublicPage && publicPageSlugs.includes(legacyPublicPage)) history.replaceState(null, '', `/${legacyPublicPage}`)
@@ -116,6 +122,7 @@ function render() {
   else if (view === 'block-game') blockController.render()
   else if (view === 'slice-game') sliceController.render()
   else if (view === 'bottles-game') bottlesController.render()
+  else if (view === 'solo-room') renderSoloRoomPeers()
   else if (view === 'snakes-lobby') renderSnakesLobby()
   else if (view === 'snakes-game') renderSnakesGame()
   else if (view === 'ludo-lobby') renderLudoLobby()
@@ -125,7 +132,7 @@ function render() {
 function renderHome() {
   lastAnimatedRollSequence = -1
   updateDocumentMeta()
-  const {html, selectedGame, isSolo} = homeScreen(selectedGameId, homeNotice)
+  const {html, selectedGame, isSolo, roomEnabled} = homeScreen(selectedGameId, homeNotice)
   app.innerHTML = html
   bindAccountUi(app)
 
@@ -139,8 +146,9 @@ function renderHome() {
 
   if (isSolo) {
     document.querySelector('#start-solo')?.addEventListener('click', selectedGameId === 'fruit-merge' ? startFruitGame : selectedGameId === 'block-blast' ? startBlockGame : selectedGameId === 'fruit-slice' ? startSliceGame : selectedGameId === 'magic-bottles' ? startBottlesGame : startArrowGame)
-    return
   }
+
+  if (!roomEnabled) return
 
   let pendingHost = true
   const nameDialog = document.querySelector<HTMLDialogElement>('#name-dialog')!
@@ -181,7 +189,7 @@ function renderHome() {
     nameDialog.close()
     startOnline(pendingHost, name, codeInput.value)
   })
-  document.querySelector('#open-demo')!.addEventListener('click', openDemo)
+  document.querySelector('#open-demo')?.addEventListener('click', openDemo)
 }
 
 function startArrowGame() {
@@ -584,12 +592,123 @@ function centerActiveCellOnMobile(state: GameState) {
   })
 }
 
+function createSoloController(gameId: SoloRoomGameId, root: HTMLElement) {
+  if (gameId === 'fruit-merge') return createFruitController(root, bindLeaveButtons)
+  if (gameId === 'block-blast') return createBlockController(root, bindLeaveButtons)
+  if (gameId === 'fruit-slice') return createSliceController(root, bindLeaveButtons)
+  if (gameId === 'magic-bottles') return createBottlesController(root, bindLeaveButtons)
+  return createArrowController(root, bindLeaveButtons)
+}
+
+function startSoloRoom(host: boolean, name: string, code: string, gameId: SoloRoomGameId) {
+  arrowController.reset()
+  fruitController.reset()
+  blockController.reset()
+  sliceController.reset()
+  bottlesController.reset()
+  soloRoomController?.reset()
+  window.clearInterval(soloRoomClock)
+  soloPeers.clear()
+  activeRoomCode = code
+  activeGameId = gameId
+  isHost = host
+  isDemo = false
+  soloRoomName = name
+  homeNotice = ''
+  view = 'solo-room'
+
+  app.innerHTML = `${gameHeader({title: gameById(gameId).name, roomCode: code, status: 'Room adu skor'})}
+    <main id="main-content" class="solo-race-shell">
+      <section class="solo-race-heading">
+        <div><p class="step-label">Main bareng</p><h1>${escapeHtml(gameById(gameId).name)}</h1><p>Setiap pemain punya papan sendiri. Gerakan teman tampil langsung di sebelah papanmu.</p></div>
+        <div class="solo-race-room"><small>Kode room</small><strong>${escapeHtml(code)}</strong><button class="button button-secondary button-small" id="copy-solo-code" type="button">${copyIcon()} Salin</button></div>
+      </section>
+      <div class="solo-race-status"><strong id="solo-player-count">1 pemain</strong><span>Game berjalan independen · tidak ada giliran</span></div>
+      <section class="solo-race-grid" id="solo-race-grid" aria-label="Papan semua pemain">
+        <article class="solo-race-card solo-race-local" data-peer-card="self">
+          <header><div><span class="status-dot"></span><strong>${escapeHtml(name)}</strong></div><small>Papan kamu</small></header>
+          <div class="solo-race-game" id="solo-local-game"></div>
+        </article>
+      </section>
+    </main>`
+  bindLeaveButtons()
+  document.querySelector('#copy-solo-code')?.addEventListener('click', copyRoomCode)
+
+  network = connectRoom(code, name, gameId, {
+    onHello: (peerName, peerId) => {
+      soloPeers.set(peerId, {name: peerName, snapshot: soloPeers.get(peerId)?.snapshot ?? null})
+      window.clearTimeout(joinTimer)
+      renderSoloRoomPeers()
+    },
+    onIntent: () => undefined,
+    onSnapshot: () => undefined,
+    onSoloSnapshot: (snapshot, peerId) => {
+      const peer = soloPeers.get(peerId) ?? {name: 'Teman', snapshot: null}
+      if (!peer.snapshot || snapshot.sentAt >= peer.snapshot.sentAt) peer.snapshot = snapshot
+      soloPeers.set(peerId, peer)
+      renderSoloRoomPeers()
+    },
+    onPeerJoin: (_peerId, reconnected) => showToast(reconnected ? 'Teman tersambung kembali.' : 'Teman masuk ke room.'),
+    onPeerDisconnect: () => showToast('Koneksi teman terputus. Mencoba menyambung ulang…'),
+    onPeerLeave: (peerId) => {
+      soloPeers.delete(peerId)
+      renderSoloRoomPeers()
+    },
+    onError: showToast,
+  })
+  localPeerId = network.selfId
+  soloPeers.set(localPeerId, {name, snapshot: null})
+  soloRoomController = createSoloController(gameId, document.querySelector<HTMLElement>('#solo-local-game')!)
+  soloRoomController.start()
+  soloRoomClock = window.setInterval(() => {
+    const state = soloRoomController?.snapshot()
+    if (!state || !network || view !== 'solo-room') return
+    const snapshot = {gameId, state, sentAt: Date.now()} as SoloPeerSnapshot
+    soloPeers.set(localPeerId, {name: soloRoomName, snapshot})
+    void network.sendSoloSnapshot(snapshot).catch(() => undefined)
+  }, 400)
+
+  window.clearTimeout(joinTimer)
+  if (!host) joinTimer = window.setTimeout(() => {
+    if (soloPeers.size <= 1 && view === 'solo-room') void leaveToHome('Room tidak ditemukan atau belum ada peer yang tersambung.')
+  }, 15_000)
+  window.scrollTo({top: 0, behavior: 'auto'})
+}
+
+function renderSoloRoomPeers() {
+  const grid = document.querySelector<HTMLElement>('#solo-race-grid')
+  if (!grid || !isSoloRoomGameId(activeGameId)) return
+  const remoteIds = [...soloPeers.keys()].filter((peerId) => peerId !== localPeerId)
+  grid.style.setProperty('--race-players', String(Math.max(1, remoteIds.length + 1)))
+  document.querySelector('#solo-player-count')!.textContent = `${remoteIds.length + 1} pemain`
+
+  grid.querySelectorAll<HTMLElement>('[data-peer-card]:not([data-peer-card="self"])').forEach((card) => {
+    if (!remoteIds.includes(card.dataset.peerCard ?? '')) card.remove()
+  })
+  for (const peerId of remoteIds) {
+    const peer = soloPeers.get(peerId)!
+    let card = [...grid.querySelectorAll<HTMLElement>('[data-peer-card]')].find((item) => item.dataset.peerCard === peerId)
+    if (!card) {
+      card = document.createElement('article')
+      card.className = 'solo-race-card solo-race-remote'
+      card.dataset.peerCard = peerId
+      card.innerHTML = `<header><div><span class="status-dot"></span><strong></strong></div><small>Menunggu snapshot</small></header><div class="solo-race-game solo-peer-board"></div>`
+      grid.append(card)
+    }
+    card.querySelector('strong')!.textContent = peer.name
+    const board = card.querySelector<HTMLElement>('.solo-peer-board')!
+    if (!peer.snapshot) {
+      board.innerHTML = '<div class="solo-peer-waiting"><span></span><p>Menunggu papan…</p></div>'
+      continue
+    }
+    if (board.dataset.sentAt === String(peer.snapshot.sentAt)) continue
+    board.dataset.sentAt = String(peer.snapshot.sentAt)
+    renderSoloSpectator(board, activeGameId, peer.snapshot.state)
+    card.querySelector('small')!.textContent = board.dataset.summary ?? 'Sedang bermain'
+  }
+}
+
 function startOnline(host: boolean, rawName: string, rawCode: string) {
-  if (selectedGameId === 'arrow-puzzle') return startArrowGame()
-  if (selectedGameId === 'fruit-merge') return startFruitGame()
-  if (selectedGameId === 'block-blast') return startBlockGame()
-  if (selectedGameId === 'fruit-slice') return startSliceGame()
-  if (selectedGameId === 'magic-bottles') return startBottlesGame()
   const name = rawName.trim()
   const code = host ? roomCode() : normalizeRoomCode(rawCode)
   const error = document.querySelector<HTMLParagraphElement>('#form-error')
@@ -604,6 +723,8 @@ function startOnline(host: boolean, rawName: string, rawCode: string) {
     document.querySelector<HTMLInputElement>('#room-code')?.focus()
     return
   }
+
+  if (isSoloRoomGameId(selectedGameId)) return startSoloRoom(host, name, code, selectedGameId)
 
   activeRoomCode = code
   activeGameId = selectedGameId
@@ -1424,6 +1545,7 @@ function publishState() {
 async function leaveToHome(message = '') {
   window.clearTimeout(joinTimer)
   window.clearInterval(auctionClock)
+  window.clearInterval(soloRoomClock)
   await network?.leave().catch(() => undefined)
   isAnimatingPawn = false
   lastAnimatedSnakesMoveSequence = -1
@@ -1437,6 +1559,9 @@ async function leaveToHome(message = '') {
   blockController.reset()
   sliceController.reset()
   bottlesController.reset()
+  soloRoomController?.reset()
+  soloRoomController = null
+  soloPeers.clear()
   snakesGame = null
   ludoGame = null
   view = 'home'
@@ -1450,7 +1575,7 @@ function bindLeaveButtons() {
   document.querySelectorAll('[data-leave]').forEach((button) =>
     button.addEventListener('click', async (event) => {
       event.preventDefault()
-      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' || view === 'slice-game' || view === 'bottles-game' ? 'Keluar dari game? Jika kamu sudah masuk, progres terakhir bisa dilanjutkan nanti.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
+      const message = view === 'arrow-game' || view === 'fruit-game' || view === 'block-game' || view === 'slice-game' || view === 'bottles-game' ? 'Keluar dari game? Jika kamu sudah masuk, progres terakhir bisa dilanjutkan nanti.' : view === 'solo-room' ? 'Keluar dari room? Papanmu tetap tersimpan jika kamu sudah masuk.' : 'Keluar dari room? Permainan ini tidak dapat dipulihkan.'
       if (!isDemo && !await confirmLeave(message)) return
       void leaveToHome()
     }),

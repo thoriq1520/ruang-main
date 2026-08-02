@@ -1,5 +1,5 @@
 import {describe, expect, test} from 'bun:test'
-import {normalizeRun} from './runs'
+import {normalizeGuestName, normalizeRun} from './runs'
 
 describe('normalisasi hasil solo', () => {
   test('skor sesi Arrow dihitung dari level terakhir', () => {
@@ -35,5 +35,11 @@ describe('normalisasi hasil solo', () => {
 
   test('nilai yang tidak masuk akal ditolak', () => {
     expect(() => normalizeRun({gameId: 'fruit-merge', result: 'lost', score: 99_000_000, largestKind: 1, durationMs: 1})).toThrow('score tidak valid')
+  })
+
+  test('nama tamu dirapikan dan dibatasi', () => {
+    expect(normalizeGuestName('  Dede   Gemes  ')).toBe('Dede Gemes')
+    expect(() => normalizeGuestName('')).toThrow('1-20')
+    expect(() => normalizeGuestName('x'.repeat(21))).toThrow('1-20')
   })
 })

@@ -1,6 +1,6 @@
 import type {RoomGameId} from '../network/network'
 
-export type GameId = RoomGameId | 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice' | 'magic-bottles'
+export type GameId = RoomGameId
 
 export type GameCatalogItem = {
   id: GameId
@@ -10,6 +10,7 @@ export type GameCatalogItem = {
   genre: string
   description: string
   mode: 'online' | 'solo'
+  roomEnabled?: boolean
   coverImage?: string
   seoTitle: string
   seoDescription: string
@@ -94,7 +95,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     id: 'arrow-puzzle',
     slug: 'arrow-puzzle',
     name: 'Arrow Puzzle',
-    playerLabel: 'SOLO',
+    playerLabel: '1+',
     genre: 'Puzzle logika',
     description: 'Lepaskan semua panah dari papan. Panah hanya dapat bergerak jika jalurnya benar-benar kosong.',
     mode: 'solo',
@@ -117,7 +118,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     id: 'fruit-merge',
     slug: 'fruit-merge',
     name: 'Fruit Merge',
-    playerLabel: 'SOLO',
+    playerLabel: '1+',
     genre: 'Puzzle physics',
     description: 'Jatuhkan dan gabungkan buah sejenis sampai menjadi semangka tanpa melewati batas wadah.',
     mode: 'solo',
@@ -140,7 +141,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     id: 'fruit-slice',
     slug: 'tebas-buah',
     name: 'Tebas Buah',
-    playerLabel: 'SOLO',
+    playerLabel: '1+',
     genre: 'Aksi refleks',
     description: 'Sapukan jari atau mouse untuk membelah buah, membuat combo, dan menghindari bom.',
     mode: 'solo',
@@ -163,7 +164,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     id: 'block-blast',
     slug: 'block-blast',
     name: 'Blok Brak',
-    playerLabel: 'SOLO',
+    playerLabel: '1+',
     genre: 'Puzzle balok',
     description: 'Susun balok warna-warni, penuhi baris atau kolom, dan jaga papan tetap punya ruang.',
     mode: 'solo',
@@ -186,7 +187,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     id: 'magic-bottles',
     slug: 'botol-warna',
     name: 'Botol Warna',
-    playerLabel: 'SOLO',
+    playerLabel: '1+',
     genre: 'Puzzle warna',
     description: 'Tuang lapisan cairan antarbotol sampai setiap botol hanya berisi satu warna.',
     mode: 'solo',
@@ -229,7 +230,7 @@ export function gameCard(item: GameCatalogItem, selected: boolean) {
                 : `<span class="game-card-blocks" aria-hidden="true">${'<i></i>'.repeat(20)}</span>`
 
   return `<button class="game-card game-card-option game-card-${item.id} ${selected ? 'is-selected' : ''}" type="button" data-select-game="${item.id}" aria-label="Pilih game ${item.name}" aria-pressed="${selected}">
-    <span class="game-card-top"><small>${item.mode === 'solo' ? 'Main sendiri' : 'Room privat'}</small><i>${item.playerLabel}</i></span>
+    <span class="game-card-top"><small>${item.mode === 'solo' ? item.roomEnabled === false ? 'Main sendiri' : 'Solo / bareng' : 'Room privat'}</small><i>${item.playerLabel}</i></span>
     ${visual}
     <strong>${item.name}</strong>
     <small>${item.genre}</small>

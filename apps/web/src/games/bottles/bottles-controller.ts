@@ -1,4 +1,5 @@
-import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame} from '../../api/client'
+import {finishSoloRun} from '../../shared/solo-result'
 import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
@@ -56,7 +57,7 @@ export function createBottlesController(root: HTMLElement, bindLeaveButtons: () 
     if (game.status === 'complete' && !submitted) {
       submitted = true
       if (authenticated) void archiveSoloGame('magic-bottles')
-      void submitSoloRun({gameId: 'magic-bottles', result: 'won', level: BOTTLE_SESSION_LEVELS, moves: game.totalMoves, durationMs: Math.round(performance.now() - startedAt)})
+      void finishSoloRun({gameId: 'magic-bottles', result: 'won', level: BOTTLE_SESSION_LEVELS, moves: game.totalMoves, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
     }
   }
 
@@ -138,6 +139,7 @@ export function createBottlesController(root: HTMLElement, bindLeaveButtons: () 
 
   return {
     get active() { return game !== null },
+    snapshot: () => game ? game.toSave(performance.now() - startedAt) : null,
     start,
     render,
     reset() {

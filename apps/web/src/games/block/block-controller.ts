@@ -1,9 +1,10 @@
-import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame} from '../../api/client'
 import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {BlockBlastGame, blockPieceSize, type BlockPiece, type BlockPlacement} from './block-game'
 import {BLOCK_BOARD_SIZE, blockGameScreen, centeredPlacement} from './block-view'
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
+import {finishSoloRun} from '../../shared/solo-result'
 
 export function createBlockController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: BlockBlastGame | null = null
@@ -61,7 +62,7 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
     if (game.status === 'over' && !submitted) {
       submitted = true
       if (authenticated) void archiveSoloGame('block-blast')
-      void submitSoloRun({gameId: 'block-blast', result: 'lost', score: game.score, linesCleared: game.linesCleared, durationMs: Math.round(performance.now() - startedAt)})
+      void finishSoloRun({gameId: 'block-blast', result: 'lost', score: game.score, linesCleared: game.linesCleared, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
     }
   }
 
@@ -242,6 +243,7 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
 
   return {
     get active() { return game !== null },
+    snapshot: () => game ? game.toSave(performance.now() - startedAt) : null,
     start,
     render,
     reset() {

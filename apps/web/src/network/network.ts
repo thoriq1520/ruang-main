@@ -4,14 +4,20 @@ import type {GameIntent, GameState} from '../games/monopoly/game'
 import {isSnakesState, snakeMapIds, type SnakesIntent, type SnakesState} from '../games/snakes/snakes-game.ts'
 import {isLudoState, ludoColors, type LudoIntent, type LudoState} from '../games/ludo/ludo-game.ts'
 
-export type RoomGameId = 'monopoly' | 'snakes-ladders' | 'ludo'
+export type BoardRoomGameId = 'monopoly' | 'snakes-ladders' | 'ludo'
+export type SoloRoomGameId = 'arrow-puzzle' | 'fruit-merge' | 'block-blast' | 'fruit-slice' | 'magic-bottles'
+export type RoomGameId = BoardRoomGameId | SoloRoomGameId
 export type RoomIntent = GameIntent | SnakesIntent | LudoIntent
 export type RoomState = GameState | SnakesState | LudoState
+export type SoloPeerSnapshot = {gameId: SoloRoomGameId; state: JsonValue; sentAt: number}
+
+export const soloRoomGameIds: readonly SoloRoomGameId[] = ['arrow-puzzle', 'fruit-merge', 'block-blast', 'fruit-slice', 'magic-bottles']
 
 type NetworkCallbacks = {
   onHello: (name: string, peerId: string) => void
   onIntent: (intent: RoomIntent, peerId: string) => void
   onSnapshot: (state: RoomState, peerId: string) => void
+  onSoloSnapshot?: (snapshot: SoloPeerSnapshot, peerId: string) => void
   onPeerJoin: (peerId: string, reconnected: boolean) => void
   onPeerDisconnect: (peerId: string, retryMs: number) => void
   onPeerLeave: (peerId: string) => void
@@ -62,6 +68,7 @@ export type NetworkSession = {
   selfId: string
   sendIntent: (intent: RoomIntent) => Promise<void>
   sendSnapshot: (state: RoomState) => Promise<void>
+  sendSoloSnapshot: (snapshot: SoloPeerSnapshot) => Promise<void>
   leave: () => Promise<void>
 }
 
@@ -75,6 +82,7 @@ export function connectRoom(roomCode: string, name: string, gameId: RoomGameId, 
   const hello = room.makeAction('hello')
   const intent = room.makeAction('intent')
   const snapshot = room.makeAction('snapshot')
+  const soloSnapshot = room.makeAction('solo-state')
   const peerLeaveGrace = createPeerLeaveGrace(callbacks.onPeerLeave)
 
   hello.onMessage = (payload, {peerId}) => {
@@ -87,6 +95,10 @@ export function connectRoom(roomCode: string, name: string, gameId: RoomGameId, 
 
   snapshot.onMessage = (payload, {peerId}) => {
     if (isRoomState(payload, gameId)) callbacks.onSnapshot(payload as unknown as RoomState, peerId)
+  }
+
+  soloSnapshot.onMessage = (payload, {peerId}) => {
+    if (isSoloPeerSnapshot(payload, gameId)) callbacks.onSoloSnapshot?.(payload, peerId)
   }
 
   room.onPeerJoin = (peerId) => {
@@ -102,6 +114,7 @@ export function connectRoom(roomCode: string, name: string, gameId: RoomGameId, 
     selfId,
     sendIntent: (data) => intent.send(data as unknown as DataPayload),
     sendSnapshot: (state) => snapshot.send(state as unknown as DataPayload),
+    sendSoloSnapshot: (state) => soloSnapshot.send(state as unknown as DataPayload),
     leave: () => {
       peerLeaveGrace.clear()
       return room.leave()
@@ -125,6 +138,7 @@ function isObject(value: DataPayload): value is Record<string, JsonValue> {
 
 function isIntent(value: DataPayload, gameId: RoomGameId) {
   if (!isObject(value) || typeof value.type !== 'string') return false
+  if (isSoloRoomGameId(gameId)) return false
   if (gameId === 'snakes-ladders') {
     if (value.type === 'SNAKES_START' || value.type === 'SNAKES_ROLL') return true
     return value.type === 'SNAKES_SET_MAP' && typeof value.mapId === 'string' && snakeMapIds.includes(value.mapId as (typeof snakeMapIds)[number])
@@ -150,6 +164,7 @@ function isIntent(value: DataPayload, gameId: RoomGameId) {
 }
 
 function isRoomState(value: DataPayload, gameId: RoomGameId) {
+  if (isSoloRoomGameId(gameId)) return false
   if (gameId === 'snakes-ladders') return isSnakesState(value)
   if (gameId === 'ludo') return isLudoState(value)
   return (
@@ -158,4 +173,13 @@ function isRoomState(value: DataPayload, gameId: RoomGameId) {
     typeof value.sequence === 'number' &&
     Array.isArray(value.players)
   )
+}
+
+export function isSoloRoomGameId(gameId: RoomGameId | string): gameId is SoloRoomGameId {
+  return soloRoomGameIds.includes(gameId as SoloRoomGameId)
+}
+
+function isSoloPeerSnapshot(value: DataPayload, gameId: RoomGameId): value is SoloPeerSnapshot {
+  return isSoloRoomGameId(gameId) && isObject(value) && value.gameId === gameId &&
+    typeof value.sentAt === 'number' && isObject(value.state)
 }

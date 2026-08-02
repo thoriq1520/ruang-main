@@ -2,8 +2,9 @@ import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {FRUIT_BOARD_WIDTH, FruitMergeGame, fruitSpecs} from './fruit-game'
 import {drawFruitBoard, drawFruitPreview, fruitGameScreen} from './fruit-view'
-import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame} from '../../api/client'
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
+import {finishSoloRun} from '../../shared/solo-result'
 
 export function createFruitController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: FruitMergeGame | null = null
@@ -133,7 +134,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
         if (game.status === 'over' && !submitted) {
           submitted = true
           if (authenticated) void archiveSoloGame('fruit-merge')
-          void submitSoloRun({gameId: 'fruit-merge', result: 'lost', score: game.score, largestKind: game.largestKind, durationMs: Math.round(performance.now() - startedAt)})
+          void finishSoloRun({gameId: 'fruit-merge', result: 'lost', score: game.score, largestKind: game.largestKind, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
         }
         lastStatus = game.status
       }
@@ -177,6 +178,7 @@ export function createFruitController(root: HTMLElement, bindLeaveButtons: () =>
 
   return {
     get active() { return game !== null },
+    snapshot: () => game ? game.toSave(performance.now() - startedAt) : null,
     start,
     render,
     reset() {

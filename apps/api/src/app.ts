@@ -5,7 +5,7 @@ import {createAuth} from './auth'
 import {config, isAllowedWebOrigin} from './config'
 import {getPool} from './db/pool'
 import {apiResponse} from './response'
-import {normalizeRun, RunRepository, soloGameIds} from './runs'
+import {normalizeGuestName, normalizeRun, RunRepository, soloGameIds} from './runs'
 import {normalizeSaveState, SaveRepository} from './saves'
 
 const runBody = t.Object({
@@ -20,6 +20,7 @@ const runBody = t.Object({
   linesCleared: t.Optional(t.Integer()),
   bestCombo: t.Optional(t.Integer()),
   fruitsSliced: t.Optional(t.Integer()),
+  guestName: t.Optional(t.String({maxLength: 40})),
 })
 
 const requestStartedAt = new WeakMap<Request, number>()
@@ -75,7 +76,6 @@ export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot =
       })
       .post('/solo-runs', async ({body, request, status}) => {
         const session = await auth.api.getSession({headers: request.headers})
-        if (!session) return status(401, apiResponse(401, 'Silakan masuk untuk menyimpan hasil.', null, 'UNAUTHORIZED'))
         let run: ReturnType<typeof normalizeRun>
         try {
           run = normalizeRun(body)
@@ -83,7 +83,27 @@ export function createApp(pool: Pool = getPool(), adapter?: ElysiaAdapter, aot =
           const message = error instanceof Error ? error.message : 'Hasil tidak valid.'
           return status(400, apiResponse(400, message, null, 'INVALID_RUN'))
         }
-        return status(201, apiResponse(201, 'Hasil permainan tersimpan.', await repository.create(session.user.id, run)))
+        const qualification = await repository.qualification(run)
+        if (!session && !qualification.qualifies) {
+          return status(403, apiResponse(403, 'Skor tamu hanya dicatat jika masuk Top 5.', qualification, 'NOT_TOP_FIVE'))
+        }
+        let guestName: string | null = null
+        if (!session) {
+          try {
+            guestName = normalizeGuestName(body.guestName)
+          } catch (error) {
+            return status(400, apiResponse(400, error instanceof Error ? error.message : 'Nama pemain tidak valid.', qualification, 'GUEST_NAME_REQUIRED'))
+          }
+        }
+        const saved = await repository.create(session?.user.id ?? null, guestName, run)
+        return status(201, apiResponse(201, qualification.qualifies ? `Skor masuk peringkat #${qualification.rank}.` : 'Hasil permainan tersimpan.', {...saved, ...qualification}))
+      }, {body: runBody})
+      .post('/solo-runs/qualification', async ({body, status}) => {
+        try {
+          return apiResponse(200, 'Kualifikasi peringkat dihitung.', await repository.qualification(normalizeRun(body)))
+        } catch (error) {
+          return status(400, apiResponse(400, error instanceof Error ? error.message : 'Hasil tidak valid.', null, 'INVALID_RUN'))
+        }
       }, {body: runBody})
       .get('/me/solo-runs', async ({request, status}) => {
         const session = await auth.api.getSession({headers: request.headers})

@@ -5,9 +5,11 @@ import {homeSupport, publicFooter, publicHeader} from './public-pages'
 export function homeScreen(selectedGameId: GameId, notice = '') {
   const selectedGame = gameById(selectedGameId)
   const isSolo = selectedGame.mode === 'solo'
+  const roomEnabled = selectedGame.roomEnabled !== false
   return {
     selectedGame,
     isSolo,
+    roomEnabled,
     html: `
       ${publicHeader()}
       <main id="main-content" class="home-stage">
@@ -22,22 +24,18 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
           <div class="play-summary">
             <div><p>${isSolo ? 'Main sendiri' : 'Main bareng'}</p><h2 id="join-title">${selectedGame.name}</h2><p>${selectedGame.description}</p>${notice ? `<p class="notice" role="alert">${escapeHtml(notice)}</p>` : ''}</div>
           </div>
-          ${isSolo ? `
-            <div class="play-actions solo-start">
-              <button class="button button-primary" type="button" id="start-solo">Mulai bermain</button>
-              <p>Akun opsional menyimpan hasil dan permainan yang belum selesai.</p>
-            </div>` : `
-            <form class="play-actions" id="room-form" novalidate>
-              <button class="button button-primary" type="button" id="create-room">Buat room</button>
+          ${roomEnabled ? `<form class="play-actions ${isSolo ? 'solo-start' : ''}" id="room-form" novalidate>
+              ${isSolo ? '<button class="button button-primary" type="button" id="start-solo">Main sendiri</button>' : ''}
+              <button class="button ${isSolo ? 'button-secondary' : 'button-primary'}" type="button" id="create-room">Buat room${isSolo ? ' bareng' : ''}</button>
               <div class="quick-join"><label for="room-code">Sudah punya kode?</label><div><input id="room-code" name="room" class="code-input" maxlength="16" autocomplete="off" placeholder="ABCD2345" spellcheck="false" /><button class="button button-secondary" type="submit" id="join-room">Gabung</button></div></div>
-              <button class="text-button" type="button" id="open-demo">Buka mode demo</button>
+              ${isSolo ? '<p>Main sendiri atau adu skor sambil melihat papan teman secara langsung.</p>' : '<button class="text-button" type="button" id="open-demo">Buka mode demo</button>'}
               <p id="form-error" class="form-error" role="alert"></p>
-            </form>`}
+            </form>` : `<div class="play-actions solo-start solo-only"><button class="button button-primary" type="button" id="start-solo">Main sendiri</button><p>Simulasi ini sengaja tidak memiliki room, PvP, atau peringkat.</p></div>`}
         </section>
       </main>
       ${homeSupport()}
       ${publicFooter()}
-      ${isSolo ? '' : nameDialog()}`,
+      ${roomEnabled ? nameDialog() : ''}`,
   }
 }
 

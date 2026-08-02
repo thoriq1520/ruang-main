@@ -1,4 +1,5 @@
-import {archiveSoloGame, saveSoloGame, submitSoloRun} from '../../api/client'
+import {archiveSoloGame, saveSoloGame} from '../../api/client'
+import {finishSoloRun} from '../../shared/solo-result'
 import {updateDocumentMeta} from '../../app/seo'
 import type {GameController} from '../../shared/game-controller'
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
@@ -167,7 +168,7 @@ export function createSliceController(root: HTMLElement, bindLeaveButtons: () =>
         if (!submitted) {
           submitted = true
           if (authenticated) void archiveSoloGame('fruit-slice')
-          void submitSoloRun({gameId: 'fruit-slice', result: 'lost', score: game.score, bestCombo: game.bestCombo, fruitsSliced: game.fruitsSliced, durationMs: Math.round(performance.now() - startedAt)})
+          void finishSoloRun({gameId: 'fruit-slice', result: 'lost', score: game.score, bestCombo: game.bestCombo, fruitsSliced: game.fruitsSliced, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
         }
       }
       frame = requestAnimationFrame(animate)
@@ -209,6 +210,7 @@ export function createSliceController(root: HTMLElement, bindLeaveButtons: () =>
 
   return {
     get active() { return game !== null },
+    snapshot: () => game ? game.toSave(performance.now() - startedAt) : null,
     start,
     render,
     reset() {

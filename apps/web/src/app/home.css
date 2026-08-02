@@ -49,6 +49,7 @@
 .play-actions .form-error { color: #ffaaa0; }
 .play-dock .solo-start { margin: 0; }
 .play-dock .solo-start p { color: var(--color-text-muted); }
+.play-dock .solo-only { align-content: center; }
 .session-guide { padding: clamp(44px, 7vw, 76px) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
 .session-guide header { max-width: 650px; }
 .session-guide h2 { margin: 0; font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif; font-size: clamp(2rem, 5vw, 3.6rem); letter-spacing: -.045em; line-height: 1; }

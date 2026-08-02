@@ -18,11 +18,23 @@ export type SoloRunSubmission = {
   linesCleared?: number
   bestCombo?: number
   fruitsSliced?: number
+  guestName?: string
 }
 
 export async function submitSoloRun(run: SoloRunSubmission) {
   const response = await api.api['solo-runs'].post(run)
-  return {saved: !response.error, unauthorized: response.error?.status === 401}
+  const result = response.data?.data
+  return {
+    saved: !response.error,
+    rank: result && 'rank' in result ? Number(result.rank) : null,
+    qualifies: Boolean(result && 'qualifies' in result && result.qualifies),
+  }
+}
+
+export async function soloRunQualification(run: SoloRunSubmission) {
+  const response = await api.api['solo-runs'].qualification.post(run)
+  if (response.error || !response.data?.data) throw new Error('Peringkat belum dapat dihitung.')
+  return response.data.data
 }
 
 export async function soloHistory() {
