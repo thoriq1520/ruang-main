@@ -6,6 +6,8 @@ import {BLOCK_BOARD_SIZE, blockGameScreen, centeredPlacement} from './block-view
 import {prepareSoloStart, soloSaveLoadingScreen} from '../../shared/solo-save'
 import {finishSoloRun} from '../../shared/solo-result'
 
+import {blockAudio} from './block-audio'
+
 export function createBlockController(root: HTMLElement, bindLeaveButtons: () => void): GameController {
   let game: BlockBlastGame | null = null
   let startedAt = 0
@@ -57,10 +59,17 @@ export function createBlockController(root: HTMLElement, bindLeaveButtons: () =>
     if (move) {
       persist()
       showMoveEffect(move)
+      blockAudio.playPlace()
+      if (move.perfect) {
+        blockAudio.playPerfect()
+      } else if (move.clearedCells.length > 0) {
+        blockAudio.playCombo(move.combo)
+      }
     }
     root.querySelectorAll('[data-restart-block]').forEach((button) => button.addEventListener('click', () => void startFresh()))
     if (game.status === 'over' && !submitted) {
       submitted = true
+      blockAudio.playGameOver()
       if (authenticated) void archiveSoloGame('block-blast')
       void finishSoloRun({gameId: 'block-blast', result: 'lost', score: game.score, linesCleared: game.linesCleared, durationMs: Math.round(performance.now() - startedAt)}, authenticated)
     }

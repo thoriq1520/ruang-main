@@ -88,6 +88,7 @@ const bottlesController = createBottlesController(app, bindLeaveButtons)
 let soloRoomController: GameController | null = null
 let soloRoomClock = 0
 let soloRoomName = ''
+let soloRoomConnectionState: 'ready' | 'joining' | 'connected' | 'reconnecting' | 'error' = 'ready'
 const soloPeers = new Map<string, {name: string; snapshot: SoloPeerSnapshot | null}>()
 
 const legacyPublicPage = location.pathname === '/' ? location.hash.slice(1) as PublicPageSlug : null
@@ -608,6 +609,7 @@ function startSoloRoom(host: boolean, name: string, code: string, gameId: SoloRo
   isHost = host
   isDemo = false
   soloRoomName = name
+  soloRoomConnectionState = host ? 'ready' : 'joining'
   homeNotice = ''
   view = 'solo-room'
 
@@ -617,7 +619,10 @@ function startSoloRoom(host: boolean, name: string, code: string, gameId: SoloRo
         <div><p class="step-label">Main bareng</p><h1>${escapeHtml(gameById(gameId).name)}</h1><p>Setiap pemain punya papan sendiri. Gerakan teman tampil langsung di sebelah papanmu.</p></div>
         <div class="solo-race-room"><small>Kode room</small><strong>${escapeHtml(code)}</strong><button class="button button-secondary button-small" id="copy-solo-code" type="button">${copyIcon()} Salin</button></div>
       </section>
-      <div class="solo-race-status"><strong id="solo-player-count">1 pemain</strong><span>Game berjalan independen · tidak ada giliran</span></div>
+      <div class="solo-race-status">
+        <strong id="solo-player-count">1 pemain</strong>
+        <span class="solo-connection-status" id="solo-connection-status" data-state="${soloRoomConnectionState}" role="status" aria-live="polite"><span class="solo-connection-indicator" aria-hidden="true"></span><span data-solo-connection-copy></span></span>
+      </div>
       <section class="solo-race-grid" id="solo-race-grid" aria-label="Papan semua pemain">
         <article class="solo-race-card solo-race-local" data-peer-card="self">
           <header><div><span class="status-dot"></span><strong>${escapeHtml(name)}</strong></div><small>Papan kamu</small></header>
@@ -627,11 +632,13 @@ function startSoloRoom(host: boolean, name: string, code: string, gameId: SoloRo
     </main>`
   bindLeaveButtons()
   document.querySelector('#copy-solo-code')?.addEventListener('click', copyRoomCode)
+  updateSoloRoomConnectionStatus()
 
   network = connectRoom(code, name, gameId, {
     onHello: (peerName, peerId) => {
       soloPeers.set(peerId, {name: peerName, snapshot: soloPeers.get(peerId)?.snapshot ?? null})
       window.clearTimeout(joinTimer)
+      soloRoomConnectionState = 'connected'
       renderSoloRoomPeers()
     },
     onIntent: () => undefined,
@@ -640,15 +647,31 @@ function startSoloRoom(host: boolean, name: string, code: string, gameId: SoloRo
       const peer = soloPeers.get(peerId) ?? {name: 'Teman', snapshot: null}
       if (!peer.snapshot || snapshot.sentAt >= peer.snapshot.sentAt) peer.snapshot = snapshot
       soloPeers.set(peerId, peer)
+      soloRoomConnectionState = 'connected'
       renderSoloRoomPeers()
     },
-    onPeerJoin: (_peerId, reconnected) => showToast(reconnected ? 'Teman tersambung kembali.' : 'Teman masuk ke room.'),
-    onPeerDisconnect: () => showToast('Koneksi teman terputus. Mencoba menyambung ulang…'),
+    onPeerJoin: (peerId, reconnected) => {
+      window.clearTimeout(joinTimer)
+      if (!soloPeers.has(peerId)) soloPeers.set(peerId, {name: 'Teman', snapshot: null})
+      soloRoomConnectionState = 'connected'
+      renderSoloRoomPeers()
+      showToast(reconnected ? 'Teman tersambung kembali.' : 'Teman masuk ke room.')
+    },
+    onPeerDisconnect: () => {
+      soloRoomConnectionState = 'reconnecting'
+      updateSoloRoomConnectionStatus()
+      showToast('Koneksi teman terputus. Mencoba menyambung ulang…')
+    },
     onPeerLeave: (peerId) => {
       soloPeers.delete(peerId)
+      soloRoomConnectionState = soloPeers.size > 1 ? 'connected' : isHost ? 'ready' : 'error'
       renderSoloRoomPeers()
     },
-    onError: showToast,
+    onError: (message) => {
+      soloRoomConnectionState = 'error'
+      updateSoloRoomConnectionStatus()
+      showToast(message)
+    },
   })
   localPeerId = network.selfId
   soloPeers.set(localPeerId, {name, snapshot: null})
@@ -675,6 +698,7 @@ function renderSoloRoomPeers() {
   const remoteIds = [...soloPeers.keys()].filter((peerId) => peerId !== localPeerId)
   grid.style.setProperty('--race-players', String(Math.max(1, remoteIds.length + 1)))
   document.querySelector('#solo-player-count')!.textContent = `${remoteIds.length + 1} pemain`
+  updateSoloRoomConnectionStatus()
 
   grid.querySelectorAll<HTMLElement>('[data-peer-card]:not([data-peer-card="self"])').forEach((card) => {
     if (!remoteIds.includes(card.dataset.peerCard ?? '')) card.remove()
@@ -700,6 +724,21 @@ function renderSoloRoomPeers() {
     renderSoloSpectator(board, activeGameId, peer.snapshot.state)
     card.querySelector('small')!.textContent = board.dataset.summary ?? 'Sedang bermain'
   }
+}
+
+function updateSoloRoomConnectionStatus() {
+  const status = document.querySelector<HTMLElement>('#solo-connection-status')
+  const copy = status?.querySelector<HTMLElement>('[data-solo-connection-copy]')
+  if (!status || !copy) return
+  const labels = {
+    ready: 'Room siap. Menunggu teman bergabung.',
+    joining: 'Menghubungkan ke room P2P…',
+    connected: 'Terhubung. Papan pemain tersinkron.',
+    reconnecting: 'Koneksi terputus. Mencoba menyambung ulang…',
+    error: 'Koneksi gagal. Periksa kode room atau jaringan.',
+  }
+  status.dataset.state = soloRoomConnectionState
+  copy.textContent = labels[soloRoomConnectionState]
 }
 
 function startOnline(host: boolean, rawName: string, rawCode: string) {
