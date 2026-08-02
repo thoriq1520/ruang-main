@@ -2,8 +2,8 @@ export type PublicPageSlug = 'tentang' | 'cara-bermain' | 'faq' | 'kontak' | 'pr
 
 export const siteMeta = {
   name: 'Ruang Main',
-  alternateName: ['Mini Games Coop', 'ruangmain.web.id'],
-  title: 'Mini Games Coop - Main Langsung dari Browser | Ruang Main',
+  alternateName: ['ruangmain.web.id'],
+  title: 'Ruang Main - Mini Game Gratis Langsung dari Browser',
   description: 'Main Botol Warna, Tebas Buah, Blok Brak, Fruit Merge, Ludo, Ular Tangga, Arrow Puzzle, dan Kota Raya gratis langsung dari browser. Akun opsional untuk save dan peringkat solo.',
 } as const
 
@@ -70,7 +70,7 @@ export const faqItems: FaqItem[] = [
 
 export const publicPages: Record<PublicPageSlug, PublicPage> = {
   tentang: {
-    title: 'Tentang Mini Games Coop',
+    title: 'Tentang Ruang Main',
     description: 'Ruang Main adalah rumah untuk game kasual berbasis browser yang dapat langsung dimainkan sendiri atau bersama teman tanpa instalasi. Akun bersifat opsional.',
     sections: [
       {

@@ -14,7 +14,7 @@ function replaceMeta(html, attribute, key, value) {
 }
 
 function pageShell(content) {
-  return `<header class="site-header public-header"><a class="brand" href="/" aria-label="Ruang Main, halaman utama"><span>Ruang Main</span></a><nav class="public-nav" aria-label="Navigasi informasi"><a href="/tentang">Game</a><a href="/cara-bermain">Cara bermain</a><a href="/faq">FAQ</a></nav></header>${content}<footer class="site-footer"><div><a class="brand" href="/"><span>Ruang Main</span></a><p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p></div><nav aria-label="Navigasi footer"><a href="/tentang">Tentang</a><a href="/cara-bermain">Cara bermain</a><a href="/faq">FAQ</a><a href="/kontak">Kontak</a><a href="/privasi">Privasi</a><a href="/ketentuan">Ketentuan</a></nav></footer>`
+  return `<header class="site-header public-header"><a class="brand" href="/" aria-label="Ruang Main, halaman utama"><span>Ruang Main</span></a><nav class="public-nav" aria-label="Navigasi informasi"><a href="/tentang">Tentang</a><a href="/cara-bermain">Cara bermain</a><a href="/faq">FAQ</a></nav></header>${content}<footer class="site-footer"><div><a class="brand" href="/"><span>Ruang Main</span></a><p>Koleksi mini game solo dan P2P yang dimainkan langsung dari browser.</p></div><nav aria-label="Navigasi footer"><a href="/tentang">Tentang</a><a href="/cara-bermain">Cara bermain</a><a href="/faq">FAQ</a><a href="/kontak">Kontak</a><a href="/privasi">Privasi</a><a href="/ketentuan">Ketentuan</a></nav></footer>`
 }
 
 function sectionsHtml(sections) {
@@ -33,7 +33,8 @@ async function writeRoute(path, title, description, body, schema) {
   html = replaceMeta(html, 'name', 'twitter:description', description)
   html = html.replace(/<link\b(?=[^>]*\brel="canonical")[^>]*>/i, `<link rel="canonical" href="${canonical}" />`)
   html = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, `<script type="application/ld+json">${JSON.stringify(schema)}</script>`)
-  html = html.replace('<div id="app"></div>', `<div id="app">${pageShell(body)}</div>`)
+  html = html.replace(/<div id="app">[\s\S]*?(?=<div id="toast")/, `<div id="app">${pageShell(body)}</div>\n    `)
+  if (!html.includes('<main id="main-content"')) throw new Error(`Prerender gagal untuk ${path}: konten utama tidak masuk ke HTML.`)
 
   const target = path === '/' ? 'dist/index.html' : join('dist', path.slice(1), 'index.html')
   await mkdir(dirname(target), {recursive: true})
@@ -61,7 +62,8 @@ for (const slug of publicPageSlugs) {
 }
 
 for (const game of gameCatalog) {
-  const content = `<main id="main-content" class="public-page game-landing public-shell"><a class="back-link" href="/">Kembali ke semua game</a><header class="public-page-intro"><p class="step-label">${escapeHtml(game.genre)} · ${escapeHtml(game.playerLabel)} pemain</p><h1>${escapeHtml(game.name)}</h1><p>${escapeHtml(game.seoDescription)}</p><a class="button button-primary game-landing-cta" href="/?game=${game.id}#selected-game">${game.mode === 'solo' ? 'Main sekarang' : 'Buat atau gabung room'}</a></header>${sectionsHtml(game.guide)}<nav class="related-games" aria-label="Game lain di Ruang Main"><strong>Game lain</strong>${gameCatalog.filter((item) => item.id !== game.id).map((item) => `<a href="/game/${item.slug}">${escapeHtml(item.name)}</a>`).join('')}</nav></main>`
+  const visual = game.coverImage ? `<figure class="game-guide-visual"><img src="${escapeHtml(game.coverImage)}" alt="Tampilan permainan ${escapeHtml(game.name)} di Ruang Main" width="1280" height="720" loading="eager" fetchpriority="high" /><figcaption>Tampilan permainan ${escapeHtml(game.name)} langsung dari browser.</figcaption></figure>` : ''
+  const content = `<main id="main-content" class="public-page game-landing public-shell"><a class="back-link" href="/">Kembali ke semua game</a><header class="public-page-intro"><p class="step-label">${escapeHtml(game.genre)} · ${escapeHtml(game.playerLabel)} pemain</p><h1>${escapeHtml(game.name)}</h1><p>${escapeHtml(game.seoDescription)}</p><a class="button button-primary game-landing-cta" href="/?game=${game.id}#selected-game">${game.mode === 'solo' ? 'Main sekarang' : 'Buat atau gabung room'}</a></header>${visual}${sectionsHtml(game.guide)}<nav class="related-games" aria-label="Game lain di Ruang Main"><strong>Game lain</strong>${gameCatalog.filter((item) => item.id !== game.id).map((item) => `<a href="/game/${item.slug}">${escapeHtml(item.name)}</a>`).join('')}</nav></main>`
   const schema = {'@context': 'https://schema.org', '@type': 'VideoGame', name: game.name, url: `${origin}/game/${game.slug}`, description: game.seoDescription, gamePlatform: 'Web browser', playMode: game.mode === 'solo' ? 'SinglePlayer' : 'MultiPlayer', inLanguage: 'id-ID', isAccessibleForFree: true}
   await writeRoute(`/game/${game.slug}`, game.seoTitle, game.seoDescription, content, schema)
 }

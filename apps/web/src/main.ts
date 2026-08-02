@@ -39,7 +39,7 @@ import {
 import {connectRoom, isSoloRoomGameId, normalizeRoomCode, roomCode, type NetworkSession, type RoomGameId, type RoomIntent, type SoloPeerSnapshot, type SoloRoomGameId} from './network/network'
 import {publicPageSlugs, type PublicPageSlug} from './content/site-content'
 import {gameById, gameCatalog, type GameId} from './games/game-catalog'
-import {copyIcon, dieView, escapeHtml, gameHeader, initial, requestAdSafely} from './shared/ui'
+import {copyIcon, dieView, escapeHtml, gameHeader, initial} from './shared/ui'
 import {addSnakesPlayer, createSnakesDemo, createSnakesLobby, isSnakesState, removeSnakesPlayer, rollSnakes, setSnakesMap, snakeMapIds, startSnakes, type SnakeMapId, type SnakeMove, type SnakesIntent, type SnakesState} from './games/snakes/snakes-game'
 import {snakesGameScreen, snakesLobbyScreen} from './games/snakes/snakes-view'
 import {addLudoPlayer, createLudoDemo, createLudoLobby, globalTrackIndex, isLudoState, ludoColors, ludoHomeCells, ludoTrackCells, moveLudoToken, movableLudoTokens, removeLudoPlayer, rollLudo, setLudoColor, startLudo, type LudoColor, type LudoIntent, type LudoMove, type LudoState} from './games/ludo/ludo-game'
@@ -135,8 +135,6 @@ function renderHome() {
   const {html, selectedGame, isSolo, roomEnabled} = homeScreen(selectedGameId, homeNotice)
   app.innerHTML = html
   bindAccountUi(app)
-
-  requestHomeAd()
 
   document.querySelectorAll<HTMLButtonElement>('[data-select-game]').forEach((button) => button.addEventListener('click', () => {
     selectedGameId = button.dataset.selectGame as GameId
@@ -265,10 +263,6 @@ function startBottlesGame() {
   view = 'bottles-game'
   bottlesController.start()
   window.scrollTo({top: 0, behavior: 'auto'})
-}
-
-function requestHomeAd() {
-  requestAdSafely(window)
 }
 
 function renderLobby() {

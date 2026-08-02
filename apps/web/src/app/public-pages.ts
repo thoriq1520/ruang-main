@@ -15,7 +15,7 @@ export function gamePageFromPath(): GameCatalogItem | null {
 
 export function publicHeader(active?: PublicPageSlug) {
   const links: Array<[PublicPageSlug, string]> = [
-    ['tentang', 'Game'],
+    ['tentang', 'Tentang'],
     ['cara-bermain', 'Cara bermain'],
     ['faq', 'FAQ'],
   ]
@@ -45,15 +45,6 @@ function accountDialog(id: string, label: string) {
 
 export function homeSupport() {
   return `<div class="public-shell home-support">
-    <aside class="ad-slot" data-ad-placement="home-content" aria-label="Iklan">
-      <ins class="adsbygoogle"
-        style="display:block"
-        data-ad-client="ca-pub-4066128992268171"
-        data-ad-slot="4940905838"
-        data-ad-format="auto"
-        data-full-width-responsive="true"></ins>
-    </aside>
-
     <section class="session-guide" aria-labelledby="support-title">
       <header><h2 id="support-title">Tentang sesi ini</h2><p>Room multiplayer tetap peer to peer. Akun opsional hanya dipakai untuk mencatat hasil dan peringkat game solo.</p></header>
       <dl>
@@ -91,7 +82,6 @@ export function renderPublicPage(root: HTMLElement, slug: PublicPageSlug) {
         <h1>${escapeHtml(page.title)}</h1>
         <p>${escapeHtml(page.description)}</p>
       </header>
-      <aside class="ad-slot" data-ad-placement="information-content" aria-label="Iklan"></aside>
       ${slug === 'faq'
         ? `<section class="public-content-section" aria-labelledby="all-faq-title"><h2 id="all-faq-title">Jawaban yang sering dicari</h2><div class="faq-list">${faqItems.map(faqItem).join('')}</div></section>`
         : page.sections.map(publicSection).join('')}
@@ -102,7 +92,7 @@ export function renderPublicPage(root: HTMLElement, slug: PublicPageSlug) {
 }
 
 export function renderGameLandingPage(root: HTMLElement, item: GameCatalogItem) {
-  updateDocumentMeta(item.seoTitle, item.seoDescription, `/game/${item.slug}`)
+  updateDocumentMeta(item.seoTitle, item.seoDescription, `/game/${item.slug}`, item.coverImage)
   root.innerHTML = `
     ${publicHeader()}
     <main id="main-content" class="public-page game-landing public-shell">
@@ -113,6 +103,7 @@ export function renderGameLandingPage(root: HTMLElement, item: GameCatalogItem) 
         <p>${escapeHtml(item.seoDescription)}</p>
         <a class="button button-primary game-landing-cta" href="/?game=${item.id}#selected-game">${item.mode === 'solo' ? 'Main sekarang' : 'Buat atau gabung room'}</a>
       </header>
+      ${item.coverImage ? `<figure class="game-guide-visual"><img src="${escapeHtml(item.coverImage)}" alt="Tampilan permainan ${escapeHtml(item.name)} di Ruang Main" width="1280" height="720" loading="eager" fetchpriority="high" /><figcaption>Tampilan permainan ${escapeHtml(item.name)} langsung dari browser.</figcaption></figure>` : ''}
       ${item.guide.map((section) => `<section class="public-content-section"><h2>${escapeHtml(section.heading)}</h2>${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}<ul>${section.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul></section>`).join('')}
       <nav class="related-games" aria-label="Game lain di Ruang Main"><strong>Game lain</strong>${gameCatalog.filter((gameItem) => gameItem.id !== item.id).map((gameItem) => `<a href="/game/${gameItem.slug}">${escapeHtml(gameItem.name)}</a>`).join('')}</nav>
     </main>

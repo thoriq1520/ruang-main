@@ -18,6 +18,7 @@ export function homeScreen(selectedGameId: GameId, notice = '') {
         </header>
         <section class="game-library" aria-labelledby="library-title">
           <div class="library-heading"><h2 id="library-title">Semua game</h2><p>${isSolo ? 'Solo, langsung mulai.' : `${selectedGame.playerLabel} pemain, room privat.`}</p></div>
+          <p class="game-shelf-hint">Geser kartu ke samping untuk melihat game lain.</p>
           <div class="game-shelf" aria-label="Koleksi game Ruang Main">${gameCatalog.map((item) => gameCard(item, item.id === selectedGameId)).join('')}</div>
         </section>
         <section class="play-dock" id="selected-game" aria-labelledby="join-title">

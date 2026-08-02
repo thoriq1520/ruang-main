@@ -3135,21 +3135,6 @@ button:disabled {
   padding: clamp(44px, 7vw, 84px) 0;
 }
 
-.ad-slot:not(:has(.adsbygoogle[data-ad-status="filled"])) {
-  display: none;
-}
-
-.ad-slot:has(.adsbygoogle[data-ad-status="filled"]) {
-  min-height: 90px;
-  margin: 0 0 32px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  background: var(--color-surface);
-}
-
 .faq-preview h2,
 .public-page h1,
 .public-page h2 {
